@@ -1,0 +1,13 @@
+[Unit]
+Description=Sukuna Store Backend (POC)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /opt/sukuna/sukuna_store_server.py
+Restart=on-failure
+User=root
+WorkingDirectory=/opt/sukuna
+
+[Install]
+WantedBy=multi-user.target

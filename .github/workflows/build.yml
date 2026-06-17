@@ -1,0 +1,43 @@
+name: Build Kernel Sukuna
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [ x86_64, arm64 ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev bc dwarves fakeroot kernel-package git
+
+      - name: Make scripts executable
+        run: sudo chmod +x scripts/*.sh ci/*.sh || true
+
+      - name: Apply patches
+        run: ./scripts/apply_patches.sh
+
+      - name: Configure and build
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          ./scripts/build_kernel.sh ARCH=${{ matrix.arch }} OUTDIR=/tmp/kernel-build-${{ matrix.arch }} JOBS=$(nproc)
+
+      - name: Package
+        run: ./ci/debian-package.sh /tmp/kernel-build-${{ matrix.arch }} ${{ matrix.arch }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-${{ matrix.arch }}
+          path: build-artifacts/**

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#090909"/>
+      <stop offset="100%" stop-color="#180000"/>
+    </linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <circle cx="960" cy="540" r="320" fill="rgba(212,175,55,0.12)"/>
+  <path d="M620,600 L1040,340 L1260,720" stroke="#d4af37" stroke-width="18" fill="none" opacity="0.75"/>
+  <text x="960" y="980" fill="#b09f4b" font-family="Segoe UI, Arial, sans-serif" font-size="64" text-anchor="middle">SukunaOS</text>
+</svg>
