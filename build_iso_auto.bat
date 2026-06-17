@@ -1,66 +1,107 @@
 @echo off
 REM SukunaOS ISO Build Launcher para Windows
-REM Este script faz commit das mudanças, faz push para GitHub e ativa o build automático
+REM Este script configura o repo local, adiciona remote GitHub e faz push.
 
 setlocal enabledelayedexpansion
+set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
 
 echo.
-echo ╔════════════════════════════════════════════════════════════╗
-echo ║     🚀 SukunaOS ISO Build - Launcher Automático            ║
-echo ╚════════════════════════════════════════════════════════════╝
+echo ===========================================
+echo  SukunaOS ISO Build Launcher
+echo ===========================================
 echo.
+echo Script: %SCRIPT_DIR%
+echo Executando em: %CD%
 
-REM Verifica se tem mudanças
-git status --porcelain >nul 2>&1
+git --version >nul 2>&1
 if %errorlevel% neq 0 (
-    echo ❌ Git não está configurado ou você não está em um repo Git
-    echo Solução: git init ^&^& git remote add origin ^<seu-repo-url^>
+    echo ERRO: Git nao encontrado.
+    echo Instale Git: https://git-scm.com/download/win
     pause
     exit /b 1
 )
 
-echo 📝 Fazendo commit das mudanças...
-git add -A
-git commit -m "🔨 Build ISO automático - %date%"
+if not exist .git (
+    echo Inicializando repositorio Git local...
+    git init
+)
 
-if %errorlevel% neq 0 (
-    echo ⚠️ Nada novo para fazer commit (pode ser normal)
+for /f "delims=" %%b in ('git rev-parse --abbrev-ref HEAD 2^>nul') do set "BRANCH=%%b"
+if "%BRANCH%"=="" set "BRANCH=master"
+if "%BRANCH%"=="HEAD" set "BRANCH=master"
+
+echo Branch atual: %BRANCH%
+
+set "REMOTE_URL="
+git remote get-url origin >nul 2>&1 && for /f "delims=" %%r in ('git remote get-url origin') do set "REMOTE_URL=%%r"
+if "%REMOTE_URL%"=="" (
+    echo Nao ha remote origin configurado.
+    set /p GITHUB_USER=Digite seu usuario GitHub [Abdo60267]: 
+    if "%GITHUB_USER%"=="" set "GITHUB_USER=Abdo60267"
+    set /p GITHUB_REPO=Digite o nome do repositorio [SukunaOS]: 
+    if "%GITHUB_REPO%"=="" set "GITHUB_REPO=SukunaOS"
+    set "REMOTE_URL=https://github.com/%GITHUB_USER%/%GITHUB_REPO%.git"
+    git remote add origin %REMOTE_URL%
 ) else (
-    echo ✅ Commit realizado
+    echo Remote origin ja configurado: %REMOTE_URL%
+)
+
+if not defined GITHUB_USER (
+    for /f "tokens=4 delims=/" %%u in ("%REMOTE_URL%") do set "GITHUB_USER=%%u"
+)
+if not defined GITHUB_REPO (
+    for /f "tokens=5 delims=/" %%r in ("%REMOTE_URL%") do set "GITHUB_REPO=%%r"
+    set "GITHUB_REPO=%GITHUB_REPO:.git=%"
+)
+
+git status --porcelain >nul 2>&1
+if %errorlevel% neq 0 (
+    echo ERRO: Nao foi possivel executar git status.
+    pause
+    exit /b 1
+)
+
+set "CHANGES=0"
+for /f %%c in ('git status --porcelain') do set "CHANGES=1"
+
+if "%CHANGES%"=="1" (
+    echo Preparando commit...
+    git add -A
+    git commit -m "🔨 Prepare repo and enable GitHub ISO build"
+    if %errorlevel% neq 0 (
+        echo Aviso: nenhuma mudanca nova para commitar.
+    ) else (
+        echo Commit realizado.
+    )
+) else (
+    echo Nada novo para commitar.
 )
 
 echo.
-echo 📤 Fazendo push para GitHub (branch main)...
-git push -u origin main
-
+echo Tentando push para %REMOTE_URL%...
+git push -u origin %BRANCH%
 if %errorlevel% neq 0 (
-    echo ❌ Erro no push. Verifique:
-    echo   - Tem acesso ao repositório?
-    echo   - Rodou: git config --global user.name "Seu Nome"
-    echo   - Rodou: git config --global user.email "seu@email.com"
+    echo ERRO: Push falhou.
+    echo Verifique:
+    echo   - O repositorio %REMOTE_URL% existe no GitHub
+    echo   - Voce esta logado no GitHub no Windows
+    echo   - Voce tem permissao para publicar no repo
+    echo.
+    echo Caso o repositorio nao exista, crie em:
+    echo   https://github.com/%GITHUB_USER%/%GITHUB_REPO%
+    echo.
     pause
     exit /b 1
 )
 
 echo ✅ Push realizado!
 echo.
-echo ╔════════════════════════════════════════════════════════════╗
-echo ║ 🎉 ISO Build foi ativado no GitHub Actions!               ║
-echo ║                                                            ║
-echo ║ ⏱️  Tempo de espera: ~20 minutos                            ║
-echo ║                                                            ║
-echo ║ 📍 Para acompanhar:                                        ║
-echo ║    1. Vai em: https://github.com/SEU_USER/SukunaOS        ║
-echo ║    2. Clica em "Actions"                                  ║
-echo ║    3. Procura "Build SukunaOS ISO"                        ║
-echo ║    4. Quando ficar verde ✅, clica e vai em "Artifacts"  ║
-echo ║                                                            ║
-echo ║ 📥 Baixa o arquivo "sukunaos-iso"                         ║
-echo ║                                                            ║
-echo ║ Seu repositório é:                                         ║
-for /f "tokens=*" %%i in ('git config --get remote.origin.url') do set "REPO=%%i"
-echo ║    %REPO%                      ║
-echo ╚════════════════════════════════════════════════════════════╝
+echo Agora abra no navegador:
+echo   https://github.com/%GITHUB_USER%/%GITHUB_REPO%
+echo.
+echo Depois va em Actions e execute o workflow "Build SukunaOS ISO".
+echo Quando terminar, baixe o arquivo em Artifacts -> sukunaos-iso.
 echo.
 
 pause
