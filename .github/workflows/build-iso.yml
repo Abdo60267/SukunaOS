@@ -6,17 +6,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: debian:bookworm
+      options: --privileged
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Install dependencies
+      - name: Install system tools
         run: |
-          sudo apt update
-          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync debian-archive-keyring
+          apt update
+          apt install -y live-build squashfs-tools xorriso debootstrap rsync
       - name: Build ISO
         run: |
           chmod +x scripts/build_iso.sh
-          sudo bash scripts/build_iso.sh
+          bash scripts/build_iso.sh
       - name: Upload ISO Artifact
         uses: actions/upload-artifact@v4
         with:
