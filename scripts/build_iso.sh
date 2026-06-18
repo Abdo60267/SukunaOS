@@ -1,27 +1,29 @@
-﻿#!/bin/bash
+#!/bin/bash
 set -e
 
 echo "Iniciando Build do SukunaOS (Base Debian Bookworm)..."
 
-# Limpar configurações antigas que podem estar travando o build
+# Limpar tudo antes de começar
 lb clean --purge
 
-# Configurar o build para Debian Bookworm (Versão 12)
-# Adicionamos non-free-firmware para drivers modernos
+# Configurar o build (Removidos comandos incompatíveis com a v3.0)
+# O live-build 3.0 vai gerar um arquivo chamado 'live-image-amd64.hybrid.iso' por padrão
 lb config -d bookworm \
-    --debian-installer-distribution bookworm \
     --archive-areas "main contrib non-free non-free-firmware" \
-    --image-name "sukunaos-20260617" \
-    --memtest memtest86+ \
     --apt-indices false \
-    --backports true \
-    --updates true
+    --bootstrap-qemu-static true
 
-# Criar a pasta de saída se não existir
+# Criar a pasta de saída
 mkdir -p out
 
-# Rodar o build
+# Rodar o build (Essa parte demora uns 20 min)
 sudo lb build
 
-# Mover a ISO gerada para a pasta 'out' para o GitHub encontrar
-mv *.iso out/ 2>/dev/null || echo "ISO já está no lugar certo ou nome diferente."
+# Renomear e mover a ISO final para a pasta 'out'
+if [ -f *.iso ]; then
+    mv *.iso out/sukunaos-$(date +%Y%m%d).iso
+    echo "ISO criada com sucesso em out/"
+else
+    echo "ERRO: O arquivo ISO não foi encontrado após o build."
+    exit 1
+fi
