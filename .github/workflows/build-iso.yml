@@ -1,0 +1,34 @@
+name: Build SukunaOS ISO
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync
+
+      - name: Build ISO
+        run: |
+          if [ -f "scripts/build_iso.sh" ]; then
+            chmod +x scripts/build_iso.sh
+            sudo bash scripts/build_iso.sh
+          else
+            echo "ERRO: scripts/build_iso.sh nao encontrado!"
+            exit 1
+          fi
+
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sukunaos-iso
+          path: out/*.iso
