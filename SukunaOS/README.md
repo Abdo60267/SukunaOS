@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # SukunaOS
 
 SukunaOS é uma distribuição Linux conceitual inspirada em Ryomen Sukuna de Jujutsu Kaisen. A proposta agora é clara: um sistema operacional moderno e usável, mas com uma identidade visual de domínio malevolente: marcas vermelhas, cortes `Cleave/Dismantle`, selos dourados, shrine central e segurança com linguagem de maldição.
@@ -46,10 +45,10 @@ SukunaOS é uma distribuição Linux conceitual inspirada em Ryomen Sukuna de Ju
 ## Como usar
 
 1. Leia `README_KERNEL.md` para detalhes de build de kernel.
-2. Instale o Dev Kit com `install_devkit.sh`.
+2. Instale o Dev Kit com `scripts/install_devkit.sh`.
 3. Teste o MDE mockup com `mde/mockup/main.py`.
 4. Execute o backend da loja em `src/sukuna_store_server.py` se desejar testar a Store POC.
-5. Use `scripts/build_iso.sh` para gerar scripts/uma ISO live bootável e, no ambiente live, teste o instalador gráfico com `python3 src/sukuna_installer_gui.py`.
+5. Use `scripts/build_iso.sh` para gerar uma ISO live bootável e, no ambiente live, teste o instalador gráfico com `python3 src/sukuna_installer_gui.py`.
 6. Para fazer a mídia persistente, use `scripts/create_persistent_usb.sh` em um dispositivo USB maior que a ISO.
 7. Veja `docs/iso_build_guide.md` para instruções completas de build, testes em VM e troubleshooting.
 8. Quer compartilhar? Veja `docs/tutorial_pegar_iso.md` para um tutorial super simples.
@@ -57,6 +56,3 @@ SukunaOS é uma distribuição Linux conceitual inspirada em Ryomen Sukuna de Ju
 ## Status
 
 Este repositório contém um projeto conceitual completo com docs, POCs de segurança, fluxos de compatibilidade e design. Para converter em uma distribuição real, cada componente precisará ser implementado de forma nativa, empacotado e testado em hardware real.
-=======
-# SukunaOS
->>>>>>> 6c38c0aa38998595c2db149aeb674b6e89fb2bc7
