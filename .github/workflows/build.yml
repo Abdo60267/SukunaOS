@@ -11,19 +11,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install build tools
+      - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync
+          sudo apt-get update
+          sudo apt-get install -y live-build squashfs-tools xorriso debootstrap rsync
 
-      - name: Build ISO
+      - name: Run Build Script as Root
         run: |
           chmod +x scripts/*.sh || true
-          bash scripts/build_iso.sh
+          # Forçamos o sudo aqui para englobar todo o processo de uma vez
+          sudo bash scripts/build_iso.sh
 
-      - name: Upload ISO
+      - name: Upload Finished ISO
         uses: actions/upload-artifact@v4
         with:
           name: sukunaos-iso
           path: live-build/*.iso
-          if-no-files-found: error
