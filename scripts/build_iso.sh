@@ -50,7 +50,7 @@ EOF
 cd "$LIVE_DIR"
 
 if [ ! -d "$CONFIG_DIR/auto" ]; then
-  lb config --distribution bookworm --architectures amd64 \
+  lb config -d bookworm --debian-installer-distribution bookworm --archive-areas 'main contrib non-free non-free-firmware' --distribution bookworm --architectures amd64 \
     --archive-areas "main contrib non-free" \
     --binary-images iso-hybrid \
     --bootappend-live "boot=live components hostname=sukunaos locales=en_US.UTF-8" \
