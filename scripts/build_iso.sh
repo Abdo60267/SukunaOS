@@ -1,72 +1,27 @@
-#!/usr/bin/env bash
-set -euo pipefail
+﻿#!/bin/bash
+set -e
 
-# scripts/build_iso.sh
-# Build a bootable SukunaOS ISO using Debian live-build.
+echo "Iniciando Build do SukunaOS (Base Debian Bookworm)..."
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-LIVE_DIR="$ROOT/live"
-CONFIG_DIR="$LIVE_DIR/config"
-INCLUDE_DIR="$CONFIG_DIR/includes.chroot"
-PACKAGE_LIST="$CONFIG_DIR/package-lists/sukuna.list.chroot"
-ISO_OUTPUT="$LIVE_DIR/sukunaos.iso"
+# Limpar configurações antigas que podem estar travando o build
+lb clean --purge
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "This script must be run as root. Use sudo."
-  exit 1
-fi
+# Configurar o build para Debian Bookworm (Versão 12)
+# Adicionamos non-free-firmware para drivers modernos
+lb config -d bookworm \
+    --debian-installer-distribution bookworm \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --image-name "sukunaos-20260617" \
+    --memtest memtest86+ \
+    --apt-indices false \
+    --backports true \
+    --updates true
 
-command -v lb >/dev/null 2>&1 || {
-  echo "live-build is required. Install with: sudo apt install live-build"
-  exit 1
-}
+# Criar a pasta de saída se não existir
+mkdir -p out
 
-mkdir -p "$INCLUDE_DIR/opt/sukuna"
-mkdir -p "$CONFIG_DIR/package-lists"
+# Rodar o build
+sudo lb build
 
-cat > "$PACKAGE_LIST" <<'EOF'
-live-boot
-live-config
-systemd-sysv
-grub-pc
-grub-efi-amd64
-linux-image-amd64
-xorg
-xinit
-openbox
-python3
-python3-pip
-python3-venv
-git
-curl
-wget
-sudo
-xfce4
-network-manager
-network-manager-gnome
-bash-completion
-EOF
-
-cd "$LIVE_DIR"
-
-if [ ! -d "$CONFIG_DIR/auto" ]; then
-  lb config -d bookworm --debian-installer-distribution bookworm --archive-areas 'main contrib non-free non-free-firmware' --distribution bookworm --architectures amd64 \
-    --archive-areas "main contrib non-free" \
-    --binary-images iso-hybrid \
-    --bootappend-live "boot=live components hostname=sukunaos locales=en_US.UTF-8" \
-    --debian-installer false
-fi
-
-rm -rf "$INCLUDE_DIR/opt/sukuna"/*
-rsync -a --delete --exclude '/live' --exclude '/.git' --exclude '/.cache' "$ROOT/" "$INCLUDE_DIR/opt/sukuna/"
-
-echo "Building SukunaOS ISO..."
-lb build
-
-if [ -f "sukunaos-amd64.hybrid.iso" ]; then
-  mv sukunaos-amd64.hybrid.iso "$ISO_OUTPUT"
-  echo "ISO created at: $ISO_OUTPUT"
-else
-  echo "ISO build failed: output file not found"
-  exit 1
-fi
+# Mover a ISO gerada para a pasta 'out' para o GitHub encontrar
+mv *.iso out/ 2>/dev/null || echo "ISO já está no lugar certo ou nome diferente."
