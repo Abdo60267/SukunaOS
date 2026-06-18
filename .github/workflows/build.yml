@@ -1,43 +1,28 @@
-name: Build Kernel Sukuna
-
+name: Build SukunaOS ISO
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-iso:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [ x86_64, arm64 ]
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup dependencies
+      - name: Install build tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libncurses-dev bison flex libssl-dev libelf-dev bc dwarves fakeroot kernel-package git
+          sudo apt update
+          sudo apt install -y live-build squashfs-with-zstd xorriso debootstrap rsync
 
-      - name: Make scripts executable
-        run: sudo chmod +x scripts/*.sh ci/*.sh || true
-
-      - name: Apply patches
-        run: ./scripts/apply_patches.sh
-
-      - name: Configure and build
-        env:
-          ARCH: ${{ matrix.arch }}
+      - name: Build ISO
         run: |
-          ./scripts/build_kernel.sh ARCH=${{ matrix.arch }} OUTDIR=/tmp/kernel-build-${{ matrix.arch }} JOBS=$(nproc)
+          sudo chmod +x scripts/*.sh || true
+          sudo bash scripts/build_iso.sh
 
-      - name: Package
-        run: ./ci/debian-package.sh /tmp/kernel-build-${{ matrix.arch }} ${{ matrix.arch }}
-
-      - name: Upload artifacts
+      - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
-          name: kernel-${{ matrix.arch }}
-          path: build-artifacts/**
+          name: sukunaos-iso
+          path: live-build/*.iso
