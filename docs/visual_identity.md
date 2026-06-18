@@ -2,42 +2,62 @@
 
 ## Tema principal
 
-- Paleta: vermelho escuro, preto, dourado e cinza profundo.
-- Tipografia: linhas limpas, fontes corporativas modernas e alta legibilidade.
-- Estilo: profissional, sóbrio e contemporâneo, com elementos inspirados em maldições e símbolos antigos.
+SukunaOS combina a ergonomia de um desktop moderno com uma camada visual inspirada em domínio, maldições, marcas e cortes. A direção correta é: sistema usável primeiro, ritual visual sempre presente.
+
+- Paleta: preto ritual, vermelho sangue, ouro de selo e texto claro quente.
+- Forma: cortes diagonais, selos circulares, altar central e marcas simétricas.
+- Clima: sombrio, preciso, poderoso e técnico.
+- Evitar: visual genérico de "OS vermelho", neon gamer demais ou painéis sem motivo Sukuna.
 
 ## Logo
 
-- Formato: SVG vetorial para aplicação em boot, desktop e marketing.
-- Inspiração: marcas de Sukuna, energia amaldiçoada, formas angulares e cortes precisos.
-- Uso: versão principal, versão simplificada para ícone e versão monochrome.
+- Formato: SVG vetorial para boot, desktop, installer e materiais do projeto.
+- Conceito: brasão escuro com marcas vermelhas, selo dourado e silhueta de shrine.
+- Variações:
+  - Principal: `assets/sukunaos-logo.svg`.
+  - Simplificada: apenas marcas + selo, sem texto.
+  - Monochrome: preto/osso ou preto/ouro para documentação.
 
 ## Boot e animações
 
-- Tela de boot animada com energia rastejante em vermelho e dourado.
-- Barra de progresso estilizada como runas ascendentes.
-- Mensagens minimalistas e tipografia clara.
+- Tela de boot com selo circular abrindo em vermelho e ouro.
+- Barra de progresso como cortes diagonais que se acendem.
+- Mensagens curtas:
+  - `Opening Domain`
+  - `Sealing Kernel`
+  - `Cleave Guard Online`
+  - `Shrine Ready`
 
 ## Wallpapers oficiais
 
-- Conceitos: templos amaldiçoados, domínio malevolente, padrões geométricos dourados e símbolos sutis.
-- Resolução recomendada: 4K + 1080p.
-- Estilo: texturas escuras, iluminação vermelha suave, ícones dourados.
+- `assets/wallpaper-1.svg`: Malevolent Shrine, com altar central e selo de domínio.
+- `assets/wallpaper-2.svg`: Cleave/Dismantle, com cortes diagonais e telemetria visual.
+- Diretrizes:
+  - Fundo escuro com contraste real para janelas.
+  - Elemento Sukuna reconhecível no primeiro olhar.
+  - Sem depender de imagens externas ou fanart.
 
 ## Sons do sistema
 
-- Pacote de sons: notificações, login/logout, erro, sucesso e alerta.
-- Tons: graves e metálicos com ambiência digital.
-- Integração: sons discretos e profissionais, não exagerados.
+- Notificação: selo metálico curto.
+- Erro: impacto seco com grave baixo.
+- Sucesso: estalo leve + brilho curto.
+- Alerta de segurança: pulso vermelho grave e discreto.
 
-## Interface
+## Interface MDE
 
-- Design consistente estilo Windows 11 / KDE Plasma.
-- Blurs sutis, sombras definidas e bordas arredondadas suaves.
-- Componentes ganhos em `MDE`: botões, cards, listas e modais seguem o mesmo sistema de design.
+- Nome completo: `Malevolent Desktop Environment`.
+- Painel rápido: `Domain Control`.
+- Modos de usuário: `Human`, `Vessel`, `King`.
+- Segurança:
+  - `Cleave Guard` para bloqueio e políticas.
+  - `Dismantle Scan` para análise.
+  - `Malevolent Domain` para sandbox.
+  - `Shrine Snapshots` para rollback.
 
 ## Assets
 
-- `assets/sukunaos-logo.svg` — logo vetorial principal.
-- `assets/wallpaper-concept.svg` — wallpaper conceitual simples.
-- `assets/brand-guidelines.md` — diretrizes de uso.
+- `assets/sukunaos-logo.svg` - brasão vetorial principal.
+- `assets/wallpaper-1.svg` - wallpaper Malevolent Shrine.
+- `assets/wallpaper-2.svg` - wallpaper Cleave/Dismantle.
+- `assets/brand-guidelines.md` - regras de aplicação da marca.

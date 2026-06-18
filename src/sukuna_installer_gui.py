@@ -10,7 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import Qt, QProcess, QByteArray
+from PySide6.QtCore import QProcess
 from PySide6.QtWidgets import (
     QApplication,
     QDialog,
@@ -29,27 +29,86 @@ from PySide6.QtWidgets import (
 )
 
 
+SUKUNA_STYLE = """
+QWizard, QDialog {
+    background: #080304;
+    color: #f4e6cf;
+}
+QWizardPage {
+    background: #080304;
+}
+QLabel {
+    color: #f4e6cf;
+}
+QGroupBox {
+    color: #e6b84d;
+    border: 1px solid #4a1519;
+    border-radius: 7px;
+    margin-top: 14px;
+    padding: 12px;
+    background: #120608;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    left: 12px;
+    padding: 0 6px;
+}
+QLineEdit, QPlainTextEdit, QTableWidget {
+    background: #120608;
+    color: #f4e6cf;
+    border: 1px solid #3a1216;
+    border-radius: 6px;
+    selection-background-color: #b30d18;
+    selection-color: #fff4df;
+}
+QHeaderView::section {
+    background: #210b0e;
+    color: #e6b84d;
+    border: 1px solid #3a1216;
+    padding: 6px;
+}
+QPushButton {
+    background: #2b0b0f;
+    color: #f4e6cf;
+    border: 1px solid #b30d18;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+QPushButton:hover {
+    background: #3b1015;
+    border-color: #e6b84d;
+}
+QPushButton:disabled {
+    background: #16080a;
+    color: #8d7565;
+    border-color: #321014;
+}
+"""
+
+
 class WelcomePage(QWizardPage):
     def __init__(self):
         super().__init__()
-        self.setTitle("Bem-vindo ao SukunaOS")
+        self.setTitle("Entre no Domínio do SukunaOS")
         layout = QVBoxLayout()
         layout.addWidget(QLineEdit())
         self.setLayout(layout)
         label = QPlainTextEdit()
         label.setReadOnly(True)
         label.setPlainText(
-            "Bem-vindo ao instalador SukunaOS!\n\n"
-            "Use este assistente para configurar seu usuário e escolher a partição de destino.\n"
-            "O instalador irá preparar a partição e executar a instalação base.")
+            "Bem-vindo ao instalador SukunaOS.\n\n"
+            "Este ritual prepara o usuário inicial, escolhe o altar de destino "
+            "e sela a instalação base.\n"
+            "Antes de prosseguir, confirme que a partição escolhida pode ser formatada."
+        )
         layout.addWidget(label)
 
 
 class UserPage(QWizardPage):
     def __init__(self):
         super().__init__()
-        self.setTitle("Configuração do usuário")
-        self.setSubTitle("Defina a conta inicial do sistema.")
+        self.setTitle("Pacto do Usuário")
+        self.setSubTitle("Defina a conta inicial que vai abrir o domínio.")
 
         self.username = QLineEdit()
         self.password = QLineEdit()
@@ -66,7 +125,7 @@ class UserPage(QWizardPage):
         self.registerField("password*", self.password)
         self.registerField("confirm_password*", self.confirm_password)
 
-        box = QGroupBox("Conta inicial")
+        box = QGroupBox("Selo de acesso")
         box.setLayout(form)
 
         layout = QVBoxLayout()
@@ -86,8 +145,8 @@ class UserPage(QWizardPage):
 class PartitionPage(QWizardPage):
     def __init__(self):
         super().__init__()
-        self.setTitle("Partição de destino")
-        self.setSubTitle("Escolha a partição onde o SukunaOS será instalado.")
+        self.setTitle("Altar de Destino")
+        self.setSubTitle("Escolha a partição onde o SukunaOS será selado.")
 
         self.partition = QLineEdit()
         self.partition.setPlaceholderText("/dev/sda1")
@@ -99,7 +158,7 @@ class PartitionPage(QWizardPage):
         self.disk_table.setSelectionBehavior(QTableWidget.SelectRows)
         self.disk_table.setEditTriggers(QTableWidget.NoEditTriggers)
 
-        self.refresh_button = QPushButton("Atualizar lista de discos")
+        self.refresh_button = QPushButton("Invocar discos")
         self.refresh_button.clicked.connect(self.load_disks)
 
         layout = QVBoxLayout()
@@ -162,8 +221,8 @@ class PartitionPage(QWizardPage):
 class SummaryPage(QWizardPage):
     def __init__(self):
         super().__init__()
-        self.setTitle("Resumo")
-        self.setSubTitle("Verifique as configurações antes de iniciar a instalação.")
+        self.setTitle("Selo Final")
+        self.setSubTitle("Verifique o pacto antes de iniciar a instalação.")
         self.summary = QPlainTextEdit()
         self.summary.setReadOnly(True)
         layout = QVBoxLayout()
@@ -175,7 +234,7 @@ class SummaryPage(QWizardPage):
         partition = self.field("partition")
         self.summary.setPlainText(
             f"Usuário: {username}\n"
-            f"Partição de destino: {partition}\n"
+            f"Altar de destino: {partition}\n"
             "\nCertifique-se de que esta partição pode ser formatada."
         )
 
@@ -183,7 +242,7 @@ class SummaryPage(QWizardPage):
 class ProgressDialog(QDialog):
     def __init__(self, command):
         super().__init__()
-        self.setWindowTitle("Instalação em andamento")
+        self.setWindowTitle("Ritual de instalação em andamento")
         self.resize(700, 400)
 
         self.log = QPlainTextEdit()
@@ -214,17 +273,17 @@ class ProgressDialog(QDialog):
 
     def on_finished(self, exit_code, status):
         if exit_code == 0:
-            self.log.appendPlainText("\nInstalação concluída com sucesso.")
+            self.log.appendPlainText("\nDomínio selado com sucesso.")
             self.progress.setText("Fechar")
         else:
-            self.log.appendPlainText(f"\nInstalação falhou com código {exit_code}.")
+            self.log.appendPlainText(f"\nO ritual falhou com código {exit_code}.")
             self.progress.setText("Fechar")
 
 
 class InstallerWizard(QWizard):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SukunaOS Installer")
+        self.setWindowTitle("SukunaOS Installer - Malevolent Domain")
         self.setWizardStyle(QWizard.ModernStyle)
         self.addPage(WelcomePage())
         self.addPage(UserPage())
@@ -238,11 +297,20 @@ class InstallerWizard(QWizard):
         backend = Path(__file__).resolve().parent / "sukuna_installer_backend.py"
 
         if not backend.exists():
-            QMessageBox.critical(self, "Erro", "Backend de instalação não encontrado. Verifique se o arquivo src/sukuna_installer_backend.py está disponível.")
+            QMessageBox.critical(
+                self,
+                "Erro",
+                "Backend de instalação não encontrado. Verifique se o arquivo "
+                "src/sukuna_installer_backend.py está disponível.",
+            )
             return
 
         if not partition.startswith("/dev/"):
-            QMessageBox.warning(self, "Partição inválida", "Informe um dispositivo de destino válido, por exemplo /dev/sda1.")
+            QMessageBox.warning(
+                self,
+                "Partição inválida",
+                "Informe um dispositivo de destino válido, por exemplo /dev/sda1.",
+            )
             return
 
         command = [
@@ -260,15 +328,16 @@ class InstallerWizard(QWizard):
         ]
 
         dialog = ProgressDialog(command)
-        result = dialog.start()
+        dialog.start()
         if dialog.process.exitCode() == 0:
             super().accept()
         else:
             QMessageBox.critical(self, "Erro", "A instalação falhou. Verifique o log acima e tente novamente.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(SUKUNA_STYLE)
     wizard = InstallerWizard()
     wizard.show()
     sys.exit(app.exec())
