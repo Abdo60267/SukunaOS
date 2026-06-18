@@ -1,66 +1,90 @@
 @echo off
-REM SukunaOS ISO Build Launcher para Windows
-REM Este script faz commit das mudanças, faz push para GitHub e ativa o build automático
+title SukunaOS - Fixador de Build
+cls
 
-setlocal enabledelayedexpansion
+echo ====================================================
+echo    🔥 SukunaOS - Reset e Correcao de Script
+echo ====================================================
+
+:: 1. Criar pastas se nao existirem
+if not exist .github\workflows mkdir .github\workflows
+if not exist scripts mkdir scripts
+
+:: 2. Usar PowerShell para criar os arquivos SEM a assinatura invisivel (BOM)
+echo [*] Gerando scripts com codificacao correta...
+
+powershell -Command "$utf8 = New-Object System.Text.UTF8Encoding $false; $iso_script = @'
+#!/bin/bash
+set -e
+echo '----------------------------------------------------'
+echo '🚀 Iniciando Build do SukunaOS (Base Debian)'
+echo '----------------------------------------------------'
+
+# Limpeza total
+sudo lb clean --purge
+
+# Configurar o build (Versao compativel com Live-Build 3.x)
+lb config -d bookworm \
+    --archive-areas 'main contrib non-free non-free-firmware' \
+    --apt-indices false
+
+# Criar pasta de saida
+mkdir -p out
+
+# Rodar o build real
+sudo lb build
+
+# Localizar a ISO e mover para a pasta out
+ISO_FILE=$(ls *.iso 2>/dev/null | head -n 1)
+if [ -f \"$ISO_FILE\" ]; then
+    mv \"$ISO_FILE\" out/sukunaos-build.iso
+    echo '✅ ISO gerada com sucesso em: out/'
+else
+    echo '❌ Erro: ISO nao encontrada.'
+    exit 1
+fi
+'@; [System.IO.File]::WriteAllText('scripts/build_iso.sh', $iso_script, $utf8)"
+
+echo [*] Gerando arquivo de workflow v4...
+
+powershell -Command "$utf8 = New-Object System.Text.UTF8Encoding $false; $yaml = @'
+name: Build SukunaOS ISO
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync
+      - name: Build ISO
+        run: |
+          chmod +x scripts/build_iso.sh
+          sudo bash scripts/build_iso.sh
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sukunaos-iso
+          path: out/*.iso
+'@; [System.IO.File]::WriteAllText('.github/workflows/build-iso.yml', $yaml, $utf8)"
+
+:: 3. Enviar para o GitHub
+echo [*] Enviando correcoes para o GitHub...
+git add .
+git commit -m "🔧 FIX: Removendo BOM e corrigindo comandos lb config"
+git push origin main --force
 
 echo.
-echo ╔════════════════════════════════════════════════════════════╗
-echo ║     🚀 SukunaOS ISO Build - Launcher Automático            ║
-echo ╚════════════════════════════════════════════════════════════╝
+echo ====================================================
+echo ✅ TUDO PRONTO!
 echo.
-
-REM Verifica se tem mudanças
-git status --porcelain >nul 2>&1
-if %errorlevel% neq 0 (
-    echo ❌ Git não está configurado ou você não está em um repo Git
-    echo Solução: git init ^&^& git remote add origin ^<seu-repo-url^>
-    pause
-    exit /b 1
-)
-
-echo 📝 Fazendo commit das mudanças...
-git add -A
-git commit -m "🔨 Build ISO automático - %date%"
-
-if %errorlevel% neq 0 (
-    echo ⚠️ Nada novo para fazer commit (pode ser normal)
-) else (
-    echo ✅ Commit realizado
-)
-
-echo.
-echo 📤 Fazendo push para GitHub (branch main)...
-git push -u origin main
-
-if %errorlevel% neq 0 (
-    echo ❌ Erro no push. Verifique:
-    echo   - Tem acesso ao repositório?
-    echo   - Rodou: git config --global user.name "Abdo60267"
-    echo   - Rodou: git config --global user.email "abdocatnoir@gmail.com"
-    pause
-    exit /b 1
-)
-
-echo ✅ Push realizado!
-echo.
-echo ╔════════════════════════════════════════════════════════════╗
-echo ║ 🎉 ISO Build foi ativado no GitHub Actions!               ║
-echo ║                                                            ║
-echo ║ ⏱️  Tempo de espera: ~20 minutos                            ║
-echo ║                                                            ║
-echo ║ 📍 Para acompanhar:                                        ║
-echo ║    1. Vai em: https://github.com/SEU_USER/SukunaOS        ║
-echo ║    2. Clica em "Actions"                                  ║
-echo ║    3. Procura "Build SukunaOS ISO"                        ║
-echo ║    4. Quando ficar verde ✅, clica e vai em "Artifacts"  ║
-echo ║                                                            ║
-echo ║ 📥 Baixa o arquivo "sukunaos-iso"                         ║
-echo ║                                                            ║
-echo ║ Seu repositório é:                                         ║
-for /f "tokens=*" %%i in ('git config --get remote.origin.url') do set "REPO=%%i"
-echo ║    %REPO%                      ║
-echo ╚════════════════════════════════════════════════════════════╝
-echo.
-
+echo O GitHub Actions vai reiniciar o build automaticamente.
+echo Acesse: https://github.com/Abdo60267/SukunaOS/actions
+echo ====================================================
 pause

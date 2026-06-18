@@ -1,75 +1,96 @@
 @echo off
-title SukunaOS - Ativador de Build Automático
+title SukunaOS - Ultra Fix (Debian Mode)
 cls
 
 echo ====================================================
-echo    🚀 SukunaOS - Configurando Build no GitHub
+echo    🚀 SukunaOS - Ajustando Espelhamento Debian
 echo ====================================================
 
-:: 1. Criar pastas do GitHub Actions
-echo [*] Criando pastas do sistema (.github/workflows)...
+:: 1. Criar pastas se nao existirem
 if not exist .github\workflows mkdir .github\workflows
+if not exist scripts mkdir scripts
 
-:: 2. Criar o arquivo YAML de build (as instruções para o GitHub)
-echo [*] Gerando arquivo de configuracao (build-iso.yml)...
+:: 2. Gerar o script de build FORÇANDO o modo Debian e os mirrors oficiais
+echo [*] Gerando script de build (Debian Mode)...
 
-(
-echo name: Build SukunaOS ISO
-echo.
-echo on:
-echo   push:
-echo     branches: [ main, master ]
-echo   workflow_dispatch:
-echo.
-echo jobs:
-echo   build:
-echo     runs-on: ubuntu-latest
-echo     steps:
-echo       - name: Checkout code
-echo         uses: actions/checkout@v3
-echo.
-echo       - name: Install dependencies
-echo         run: ^|
-echo           sudo apt update
-echo           sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync
-echo.
-echo       - name: Build ISO
-echo         run: ^|
-echo           if [ -f "scripts/build_iso.sh" ]; then
-echo             chmod +x scripts/build_iso.sh
-echo             sudo bash scripts/build_iso.sh
-echo           else
-echo             echo "ERRO: scripts/build_iso.sh nao encontrado!"
-echo             exit 1
-echo           fi
-echo.
-echo       - name: Upload ISO Artifact
-echo         uses: actions/upload-artifact@v3
-echo         with:
-echo           name: sukunaos-iso
-echo           path: out/*.iso
-) > .github\workflows\build-iso.yml
+powershell -Command "$utf8 = New-Object System.Text.UTF8Encoding $false; $iso_script = @'
+#!/bin/bash
+set -e
+echo '----------------------------------------------------'
+echo '🚀 Build SukunaOS - Modo Nativo Debian'
+echo '----------------------------------------------------'
 
-:: 3. Sincronizar com o GitHub
-echo [*] Enviando arquivos para o GitHub...
+# Limpeza total
+sudo lb clean --purge
+
+# Configurar o build FORÇANDO o modo debian e os mirrors corretos
+# Isso evita que o live-build tente usar mirrors do Ubuntu
+lb config --mode debian \
+    -d bookworm \
+    --mirror-bootstrap http://deb.debian.org/debian/ \
+    --mirror-chroot http://deb.debian.org/debian/ \
+    --mirror-binary http://deb.debian.org/debian/ \
+    --archive-areas 'main contrib non-free non-free-firmware' \
+    --apt-indices false
+
+# Criar pasta de saida
+mkdir -p out
+
+# Rodar o build real
+sudo lb build
+
+# Localizar a ISO e mover
+ISO_FILE=$(ls *.iso 2>/dev/null | head -n 1)
+if [ -f \"$ISO_FILE\" ]; then
+    mv \"$ISO_FILE\" out/sukunaos-build.iso
+    echo '✅ ISO criada: out/sukunaos-build.iso'
+else
+    echo '❌ Erro: ISO nao gerada.'
+    exit 1
+fi
+'@; [System.IO.File]::WriteAllText('scripts/build_iso.sh', $iso_script, $utf8)"
+
+:: 3. Gerar o Workflow instalando a chave de segurança (keyring)
+echo [*] Atualizando Workflow (Instalando Keyrings)...
+
+powershell -Command "$utf8 = New-Object System.Text.UTF8Encoding $false; $yaml = @'
+name: Build SukunaOS ISO
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync debian-archive-keyring
+      - name: Build ISO
+        run: |
+          chmod +x scripts/build_iso.sh
+          sudo bash scripts/build_iso.sh
+      - name: Upload ISO Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sukunaos-iso
+          path: out/*.iso
+'@; [System.IO.File]::WriteAllText('.github/workflows/build-iso.yml', $yaml, $utf8)"
+
+:: 4. Enviar para o GitHub
+echo [*] Enviando para o GitHub...
 git add .
-git commit -m "🚀 Ativando build automatico da ISO"
-git push origin main
-
-:: Se o push falhar na main, tenta na master
-if %errorlevel% neq 0 (
-    echo [!] Falha na branch main, tentando master...
-    git push origin master
-)
+git commit -m "🔧 ULTRA FIX: Modo Debian nativo e Mirrors oficiais"
+git push origin main --force
 
 echo.
 echo ====================================================
-echo ✅ SUCESSO! O fluxo de trabalho foi instalado.
+echo ✅ CORREÇÃO ENVIADA!
 echo.
-echo PRÓXIMOS PASSOS:
-echo 1. Vá em seu navegador no GitHub.
-echo 2. Clique na aba 'Actions'.
-echo 3. Você verá 'Build SukunaOS ISO' lá!
-echo 4. Aguarde cerca de 20-30 minutos para terminar.
+echo Verifique o novo build:
+echo https://github.com/Abdo60267/SukunaOS/actions
 echo ====================================================
 pause

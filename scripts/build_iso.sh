@@ -1,29 +1,33 @@
 #!/bin/bash
 set -e
+echo '----------------------------------------------------'
+echo '🚀 Build SukunaOS - Modo Nativo Debian'
+echo '----------------------------------------------------'
 
-echo "Iniciando Build do SukunaOS (Base Debian Bookworm)..."
+# Limpeza total
+sudo lb clean --purge
 
-# Limpar tudo antes de começar
-lb clean --purge
-
-# Configurar o build (Removidos comandos incompatíveis com a v3.0)
-# O live-build 3.0 vai gerar um arquivo chamado 'live-image-amd64.hybrid.iso' por padrão
-lb config -d bookworm \
+# Configurar o build FORÇANDO o modo debian e os mirrors corretos
+lb config --mode debian \
+    -d bookworm \
+    --mirror-bootstrap "http://deb.debian.org/debian/" \
+    --mirror-chroot "http://deb.debian.org/debian/" \
+    --mirror-binary "http://deb.debian.org/debian/" \
     --archive-areas "main contrib non-free non-free-firmware" \
-    --apt-indices false \
-    --bootstrap-qemu-static true
+    --apt-indices false
 
-# Criar a pasta de saída
+# Criar pasta de saida
 mkdir -p out
 
-# Rodar o build (Essa parte demora uns 20 min)
+# Rodar o build real
 sudo lb build
 
-# Renomear e mover a ISO final para a pasta 'out'
-if [ -f *.iso ]; then
-    mv *.iso out/sukunaos-$(date +%Y%m%d).iso
-    echo "ISO criada com sucesso em out/"
+# Localizar a ISO e mover
+ISO_FILE=\
+if [ -f "\" ]; then
+    mv "\" out/sukunaos-build.iso
+    echo "✅ ISO criada: out/sukunaos-build.iso"
 else
-    echo "ERRO: O arquivo ISO não foi encontrado após o build."
+    echo "❌ Erro: ISO nao gerada."
     exit 1
 fi
