@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-iso:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -14,15 +14,16 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt update
-          sudo apt install -y live-build squashfs-with-zstd xorriso debootstrap rsync
+          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync
 
       - name: Build ISO
         run: |
-          sudo chmod +x scripts/*.sh || true
-          sudo bash scripts/build_iso.sh
+          chmod +x scripts/*.sh || true
+          bash scripts/build_iso.sh
 
       - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
           name: sukunaos-iso
           path: live-build/*.iso
+          if-no-files-found: error
