@@ -10,6 +10,7 @@ This POC tries to find `wine` or `proton` and execute the installer in an isolat
 """
 
 import os
+import shutil
 import subprocess
 import sys
 import uuid
@@ -23,7 +24,7 @@ def ensure_dirs():
 
 def find_runner():
     for cmd in ['proton', 'wine', 'wine64']:
-        path = shutil.which(cmd) if 'shutil' in globals() else None
+        path = shutil.which(cmd)
         if path:
             return cmd
     return None

@@ -38,10 +38,22 @@ def static_checks(path):
     except Exception as e:
         res['file'] = 'error: ' + str(e)
 
+    # Look for genuinely suspicious patterns, not just any URL
+    suspicious_patterns = [
+        'eval(', 'exec(', 'system(', '/bin/sh', '/bin/bash',
+        'curl ', 'wget ', 'nc -e', 'reverse_tcp', 'meterpreter',
+        'keylog', 'passwd', '/etc/shadow', 'base64 -d',
+    ]
     try:
-        s = subprocess.check_output(['strings', '-n', '4', path], stderr=subprocess.DEVNULL).decode(errors='ignore')
-        hits = [l for l in s.splitlines() if 'http' in l or 'http' in l.lower()]
-        res['strings_hit'] = hits[:10]
+        s = subprocess.check_output(['strings', '-n', '6', path], stderr=subprocess.DEVNULL).decode(errors='ignore')
+        hits = []
+        for line in s.splitlines():
+            lower = line.lower()
+            for pat in suspicious_patterns:
+                if pat.lower() in lower:
+                    hits.append(line.strip())
+                    break
+        res['strings_hit'] = hits[:20]
     except Exception:
         res['strings_hit'] = []
 
@@ -99,19 +111,23 @@ def analyze(path, timeout=30, no_network=True):
     s = static_checks(dest)
     report['evidence'].append({'static': s})
 
-    # Heuristic: if strings contain 'malicious' or many urls, mark suspicious
-    if len(s.get('strings_hit', [])) > 0:
-        report['score'] += 0.5
-        report['verdict'] = 'suspicious'
+    # Graduated scoring based on number of suspicious hits
+    hit_count = len(s.get('strings_hit', []))
+    if hit_count >= 5:
+        report['score'] += 0.6
+    elif hit_count >= 2:
+        report['score'] += 0.3
+    elif hit_count >= 1:
+        report['score'] += 0.1
 
     # Dynamic run in QEMU (POC)
     dyn = launch_qemu(inst_path, artifact_name, timeout=timeout, no_network=no_network)
     report['evidence'].append({'dynamic': dyn})
 
-    # Final simple scoring
-    if report['score'] >= 0.5:
+    # Final scoring with clearer thresholds
+    if report['score'] >= 0.6:
         report['verdict'] = 'malicious'
-    elif report['score'] > 0:
+    elif report['score'] >= 0.2:
         report['verdict'] = 'suspicious'
     else:
         report['verdict'] = 'safe'

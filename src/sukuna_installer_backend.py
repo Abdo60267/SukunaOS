@@ -9,6 +9,7 @@ bootstrap a Debian base system, create an initial user, and install GRUB.
 import argparse
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -88,18 +89,40 @@ def configure_target(root_path, username, password, hostname='sukunaos'):
         print('Warning: /opt/sukuna was not found inside target system.')
 
 
-def install_grub(root_path, device):
-    print(f"Installing GRUB to {device}...")
+def partition_to_disk(partition):
+    """Derive disk device from partition path, e.g. /dev/sda1 -> /dev/sda."""
+    base = os.path.basename(partition)
+    disk = re.sub(r'p?\d+$', '', base)
+    return os.path.join('/dev', disk)
+
+
+def install_grub(root_path, partition):
+    device = partition_to_disk(partition)
+    print(f"Installing GRUB to {device} (from partition {partition})...")
+
+    # Ensure EFI directory exists inside target
+    efi_dir = root_path / 'boot' / 'efi'
+    efi_dir.mkdir(parents=True, exist_ok=True)
+
     run(['mount', '--bind', '/dev', str(root_path / 'dev')])
     run(['mount', '--bind', '/proc', str(root_path / 'proc')])
     run(['mount', '--bind', '/sys', str(root_path / 'sys')])
     try:
-        run(['chroot', str(root_path), 'grub-install', '--target=x86_64-efi', '--efi-directory=/boot/efi', '--bootloader-id=SukunaOS', device])
+        # Try EFI install first, fall back to BIOS/legacy
+        efi_ret = subprocess.run(
+            ['chroot', str(root_path), 'grub-install',
+             '--target=x86_64-efi', '--efi-directory=/boot/efi',
+             '--bootloader-id=SukunaOS', '--no-nvram', device],
+            check=False
+        )
+        if efi_ret.returncode != 0:
+            print('EFI install failed, trying BIOS/legacy...')
+            run(['chroot', str(root_path), 'grub-install', '--target=i386-pc', device])
         run(['chroot', str(root_path), 'update-grub'])
     finally:
-        run(['umount', str(root_path / 'sys')])
-        run(['umount', str(root_path / 'proc')])
-        run(['umount', str(root_path / 'dev')])
+        run(['umount', str(root_path / 'sys')], check=False)
+        run(['umount', str(root_path / 'proc')], check=False)
+        run(['umount', str(root_path / 'dev')], check=False)
 
 
 def main():
@@ -124,10 +147,12 @@ def main():
     elif args.command == 'prepare-partition':
         prepare_partition(args.partition)
     elif args.command == 'install':
+        prepare_partition(args.partition)
         target_mount = mount_root(args.partition)
         try:
             bootstrap_system(target_mount)
             configure_target(target_mount, args.username, args.password, args.hostname)
+            install_grub(target_mount, args.partition)
         finally:
             unmount_root(target_mount)
         print('Installation process completed. Reboot and remove the live media.')

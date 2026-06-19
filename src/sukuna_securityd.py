@@ -31,8 +31,15 @@ NETLINK_USERSOCK = 2
 NLMSG_HDRLEN = 16
 
 
-def nl_recv_loop(db_conn):
-    # Listen to kernel netlink broadcasts for exec_check events
+def _connect_db():
+    """Create a new thread-local SQLite connection (thread-safe)."""
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    init_db(conn)
+    return conn
+
+
+def nl_recv_loop():
+    """Listen to kernel netlink broadcasts for exec_check events."""
     s = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_USERSOCK)
     s.bind((os.getpid(), 0))
     print('sukuna-securityd: netlink listener bound, pid=%d' % os.getpid())
@@ -55,20 +62,25 @@ def nl_recv_loop(db_conn):
                 if j and 'path' in j:
                     path = j['path']
                     print('sukuna-securityd: received exec_check for', path)
-                    # analyze asynchronously and store result in DB
-                    t = threading.Thread(target=analyze_and_store, args=(db_conn, path))
+                    # analyze asynchronously with its own DB connection
+                    t = threading.Thread(target=analyze_and_store, args=(path,))
                     t.daemon = True
                     t.start()
         except Exception as e:
             print('netlink parse error', e)
 
 
-def analyze_and_store(conn, path):
-    res = analyze_file(path)
-    verdict = res.get('verdict', 'unknown')
-    score = res.get('score', 0.0)
-    store_cache(conn, path, verdict, score, res)
-    print('sukuna-securityd: stored verdict', verdict, 'for', path)
+def analyze_and_store(path):
+    """Analyze a file and store the result using a thread-local DB connection."""
+    conn = _connect_db()
+    try:
+        res = analyze_file(path)
+        verdict = res.get('verdict', 'unknown')
+        score = res.get('score', 0.0)
+        store_cache(conn, path, verdict, score, res)
+        print('sukuna-securityd: stored verdict', verdict, 'for', path)
+    finally:
+        conn.close()
 
 SOCKET_PATH = '/run/sukuna-securityd.sock'
 DB_PATH = '/var/lib/sukuna/security.db'
@@ -138,40 +150,42 @@ class Handler(StreamRequestHandler):
         cmd = req.get('cmd')
         path = req.get('path')
 
-        conn = sqlite3.connect(DB_PATH)
-        init_db(conn)
+        # Each handler request gets its own DB connection (thread-safe)
+        conn = _connect_db()
+        try:
+            if cmd == 'check' and path:
+                row = query_cache(conn, path)
+                if row:
+                    verdict, score, info, updated = row
+                    resp = {'path': path, 'verdict': verdict, 'score': score, 'info': json.loads(info) if info else None, 'cached': True}
+                    self.wfile.write((json.dumps(resp) + '\n').encode())
+                else:
+                    # analyze
+                    res = analyze_file(path)
+                    verdict = res.get('verdict', 'unknown')
+                    score = res.get('score', 0.0)
+                    store_cache(conn, path, verdict, score, res)
+                    resp = {'path': path, 'verdict': verdict, 'score': score, 'info': res, 'cached': False}
+                    self.wfile.write((json.dumps(resp) + '\n').encode())
 
-        if cmd == 'check' and path:
-            row = query_cache(conn, path)
-            if row:
-                verdict, score, info, updated = row
-                resp = {'path': path, 'verdict': verdict, 'score': score, 'info': json.loads(info) if info else None, 'cached': True}
-                self.wfile.write((json.dumps(resp) + '\n').encode())
+            elif cmd == 'add' and path:
+                verdict = req.get('verdict', 'safe')
+                store_cache(conn, path, verdict, 1.0, {'manual': True})
+                self.wfile.write((json.dumps({'ok': True, 'path': path, 'verdict': verdict}) + '\n').encode())
+
+            elif cmd == 'list':
+                c = conn.cursor()
+                c.execute('SELECT path,verdict,score,updated FROM verdicts ORDER BY updated DESC LIMIT 200')
+                rows = [{'path': r[0], 'verdict': r[1], 'score': r[2], 'updated': r[3]} for r in c.fetchall()]
+                self.wfile.write((json.dumps({'rows': rows}) + '\n').encode())
+
+            elif cmd == 'status':
+                self.wfile.write((json.dumps({'status': 'ok'}) + '\n').encode())
+
             else:
-                # analyze
-                res = analyze_file(path)
-                verdict = res.get('verdict', 'unknown')
-                score = res.get('score', 0.0)
-                store_cache(conn, path, verdict, score, res)
-                resp = {'path': path, 'verdict': verdict, 'score': score, 'info': res, 'cached': False}
-                self.wfile.write((json.dumps(resp) + '\n').encode())
-
-        elif cmd == 'add' and path:
-            verdict = req.get('verdict', 'safe')
-            store_cache(conn, path, verdict, 1.0, {'manual': True})
-            self.wfile.write((json.dumps({'ok': True, 'path': path, 'verdict': verdict}) + '\n').encode())
-
-        elif cmd == 'list':
-            c = conn.cursor()
-            c.execute('SELECT path,verdict,score,updated FROM verdicts ORDER BY updated DESC LIMIT 200')
-            rows = [{'path': r[0], 'verdict': r[1], 'score': r[2], 'updated': r[3]} for r in c.fetchall()]
-            self.wfile.write((json.dumps({'rows': rows}) + '\n').encode())
-
-        elif cmd == 'status':
-            self.wfile.write((json.dumps({'status': 'ok'}) + '\n').encode())
-
-        else:
-            self.wfile.write(b'{"error":"unknown command"}\n')
+                self.wfile.write(b'{"error":"unknown command"}\n')
+        finally:
+            conn.close()
 
 
 def run_server():
@@ -184,10 +198,13 @@ def run_server():
     server = ThreadingUnixStreamServer(SOCKET_PATH, Handler)
     os.chmod(SOCKET_PATH, 0o660)
     print('sukuna-securityd: listening on', SOCKET_PATH)
-    conn = sqlite3.connect(DB_PATH)
-    init_db(conn)
-    # start netlink listener thread
-    t = threading.Thread(target=nl_recv_loop, args=(conn,))
+
+    # Initialize the DB schema once at startup
+    conn = _connect_db()
+    conn.close()
+
+    # start netlink listener thread (no shared DB conn)
+    t = threading.Thread(target=nl_recv_loop)
     t.daemon = True
     t.start()
     try:
