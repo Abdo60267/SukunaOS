@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" role="img" aria-labelledby="title desc">
+  <title id="title">SukunaOS Malevolent Shrine wallpaper</title>
+  <desc id="desc">A dark original shrine-like domain wallpaper with red energy, gold seals, and slash marks.</desc>
+  <defs>
+    <radialGradient id="domainGlow" cx="50%" cy="48%" r="58%">
+      <stop offset="0%" stop-color="#8f1019" stop-opacity="0.72"/>
+      <stop offset="48%" stop-color="#26070a" stop-opacity="0.84"/>
+      <stop offset="100%" stop-color="#000000"/>
+    </radialGradient>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#100507"/>
+      <stop offset="52%" stop-color="#050203"/>
+      <stop offset="100%" stop-color="#170609"/>
+    </linearGradient>
+    <linearGradient id="goldLine" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#6b4511" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#e6b84d" stop-opacity="0.82"/>
+      <stop offset="100%" stop-color="#6b4511" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blurGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="11"/>
+    </filter>
+  </defs>
+
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <rect width="1920" height="1080" fill="url(#domainGlow)" opacity="0.82"/>
+
+  <g opacity="0.32">
+    <path d="M0 170h1920M0 300h1920M0 430h1920M0 560h1920M0 690h1920M0 820h1920" stroke="#351014" stroke-width="2"/>
+    <path d="M250 0l-140 1080M604 0l-98 1080M960 0v1080M1316 0l98 1080M1670 0l140 1080" stroke="#2d0c10" stroke-width="2"/>
+  </g>
+
+  <g transform="translate(960 510)" opacity="0.76">
+    <circle r="346" fill="none" stroke="#4d1115" stroke-width="4"/>
+    <circle r="252" fill="none" stroke="#a62622" stroke-width="2"/>
+    <circle r="168" fill="none" stroke="#d4af37" stroke-width="2" opacity="0.62"/>
+    <g stroke="#b30d18" stroke-width="7" stroke-linecap="round">
+      <path d="M-430 -18h320" transform="rotate(-14)"/>
+      <path d="M98 -228h360" transform="rotate(16)"/>
+      <path d="M-365 205h420" transform="rotate(10)"/>
+      <path d="M40 284h390" transform="rotate(-11)"/>
+    </g>
+    <g stroke="url(#goldLine)" stroke-width="3" opacity="0.78">
+      <path d="M-470 -82h940"/>
+      <path d="M-380 76h760"/>
+      <path d="M-268 224h536"/>
+    </g>
+  </g>
+
+  <g filter="url(#blurGlow)" opacity="0.72">
+    <ellipse cx="960" cy="630" rx="420" ry="86" fill="#8b0000"/>
+  </g>
+
+  <g transform="translate(960 600)">
+    <path d="M-245 240h490l-58-270 42-128h-458l42 128z" fill="#090304" stroke="#d4af37" stroke-width="6" stroke-linejoin="round"/>
+    <path d="M-168 -158h336l-44 124h-248z" fill="#160709" stroke="#7f171a" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M-116 -92h232M-150 46h300M-102 144h204" stroke="#b30d18" stroke-width="18" stroke-linecap="round"/>
+    <path d="M-206 240h412" stroke="#e6b84d" stroke-width="5" opacity="0.8"/>
+  </g>
+
+  <g fill="#d4af37" opacity="0.76">
+    <circle cx="594" cy="382" r="6"/>
+    <circle cx="1326" cy="382" r="6"/>
+    <circle cx="674" cy="790" r="5"/>
+    <circle cx="1246" cy="790" r="5"/>
+  </g>
+
+  <text x="960" y="946" fill="#e6b84d" font-family="Segoe UI, Arial, sans-serif" font-size="54" font-weight="700" text-anchor="middle">SukunaOS</text>
+  <text x="960" y="996" fill="#b99c84" font-family="Segoe UI, Arial, sans-serif" font-size="22" letter-spacing="4" text-anchor="middle">MALEVOLENT DOMAIN EDITION</text>
+</svg>

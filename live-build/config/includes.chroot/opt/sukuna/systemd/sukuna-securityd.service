@@ -1,0 +1,14 @@
+[Unit]
+Description=Sukuna Security Daemon (POC)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/env python3 /opt/sukuna/sukuna_securityd.py
+Restart=on-failure
+User=root
+RuntimeDirectory=sukuna
+RuntimeDirectoryMode=0750
+
+[Install]
+WantedBy=multi-user.target

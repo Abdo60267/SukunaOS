@@ -1,6 +1,27 @@
 # 🔴 BUILD ISO SUKUNAOS - UBUNTU 24.04 LTS 🔴
 
-## Modo Automático com GitHub Actions (RECOMENDADO)
+## ✅ Antes de Começar - IMPORTANTE
+
+### Passo 0: Validar Ambiente
+```bash
+cd SukunaOS
+bash scripts/validate_build.sh   # Valida tudo antes de compilar
+```
+
+**⚠️ ATENÇÃO**: Se validação falhar, instale dependências:
+```bash
+sudo apt update
+sudo apt install -y \
+  live-build squashfs-tools xorriso \
+  debootstrap rsync ubuntu-archive-keyring \
+  live-config git make gettext \
+  grub-common grub2-common grub-efi-amd64 \
+  grub-efi-amd64-bin efibootmgr
+```
+
+---
+
+## 🌐 Modo Automático com GitHub Actions (RECOMENDADO)
 
 ### Passo 1: Configure o Git
 ```bash
@@ -8,109 +29,113 @@ git config --global user.name "Seu Nome"
 git config --global user.email "seu@email.com"
 ```
 
-### Passo 2: Execute no terminal
+### Passo 2: Push para GitHub
 ```bash
-cd C:\Users\Abdul\Desktop\SukunaOS
-.\build_iso_auto.bat
+cd SukunaOS
+git add -A
+git commit -m "🔴 Build trigger"
+git push origin main
 ```
 
-### Passo 3: Aguarde 20-40 minutos
-O GitHub Actions irá:
-1. ✅ Fazer commit automático
-2. ✅ Fazer push
-3. ✅ Gerar a ISO (Ubuntu 24.04 LTS)
-4. ✅ Deixar pronta para download
-
-### Download da ISO
+### Passo 3: Acompanhe o Build
 1. Vai em: https://github.com/SEU_USER/SukunaOS
 2. Clica em **Actions** (lá em cima)
 3. Procura **"Build SukunaOS ISO"** (mais recente)
-4. Se tiver ✅ verde, entra nele
-5. Desce até **"Artifacts"**
-6. Clica em **"sukunaos-iso"** → Download
+4. Acompanha o progresso ✅
+5. Se tiver ✅ verde → Artifact pronto!
+
+### Passo 4: Download
+1. Entra na workflow que passou
+2. Desce até **"Artifacts"**
+3. Clica em **"sukunaos-iso"** → Download
+4. Você tem a ISO! 🎉
+
+**Tempo**: ~30-40 minutos no GitHub  
+**Vantagem**: Não usa seu PC
 
 ---
 
-## 🐧 Modo Local com Docker (Alternativa)
+## 🖥️ Modo Local com Build Script
 
-Se tiver **Docker Desktop** instalado:
-
-```bash
-cd C:\Users\Abdul\Desktop\SukunaOS
-
-docker run --privileged \
-  -v ${PWD}:/workspace \
-  ubuntu:24.04 \
-  bash -c "apt update && apt install -y live-build squashfs-tools xorriso debootstrap rsync && bash /workspace/scripts/build_iso.sh"
-```
-
-**Tempo**: ~30-40 minutos  
-**Espaço disco**: ~5-8 GB
-
----
-
-## 🖥️ Modo Local Nativo (Ubuntu/Debian)
-
-Se estiver rodando em Ubuntu/Debian nativo:
-
+### Passo 1: Validar Ambiente
 ```bash
 cd SukunaOS
+bash scripts/validate_build.sh
+```
 
-# Instalar dependências
-sudo apt update
-sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync
-
-# Executar build
+### Passo 2: Executar Build
+```bash
 bash scripts/build_iso.sh
 ```
 
-**Resultado**: `live-build/live-image-amd64.iso`
+**Outputs**:
+- `live-build/live-image-amd64.iso` → ISO final ✅
+- `live-build/config_output.log` → Log de config
+- `live-build/build_output.log` → Log de build
+
+**Tempo**: 30-40 minutos (varia com internet)  
+**Espaço**: Precisa de ~5-8 GB livre
+
+---
+
+## 🐳 Modo Local com Docker (Se não tiver live-build)
+
+Se não conseguir instalar live-build:
+
+```bash
+docker run --privileged \
+  -v ${PWD}:/workspace \
+  ubuntu:24.04 \
+  bash -c "
+    apt update && \
+    apt install -y live-build squashfs-tools xorriso debootstrap rsync ubuntu-archive-keyring live-config && \
+    cd /workspace && \
+    bash scripts/build_iso.sh
+  "
+```
+
+**Requisito**: Docker Desktop instalado  
+**Tempo**: 40-50 minutos
 
 ---
 
 ## 💾 Flash para USB
 
-Depois de ter a ISO:
+Depois de ter a ISO: `live-image-amd64.iso`
 
 ### Windows (PowerShell)
 ```powershell
-# Encontre seu USB em Device Manager (ex: \\.\PHYSICALDRIVE1)
-$IsoPath = "C:\path\to\sukunaos-iso.iso"
-$UsbDrive = "\\.\PHYSICALDRIVE1"  # ATENÇÃO: Verifique o número correto!
-
-# Use Rufus, Etcher ou:
-dd.exe if=$IsoPath of=$UsbDrive bs=4M
+# Use ferramentas gráficas (mais seguro):
+# 1. Rufus: https://rufus.ie/
+# 2. Balena Etcher: https://www.balena.io/etcher/
+# 3. Ventoy: https://www.ventoy.net/
 ```
 
 ### Linux/Mac
 ```bash
-# Identifique o device
+# 1. Identifique o device
 lsblk
 
-# Flash (ATENÇÃO: Verifique /dev/sdX)
-sudo dd if=sukunaos-iso.iso of=/dev/sdX bs=4M && sync
+# 2. Flash (ATENÇÃO: Verifique /dev/sdX correto!)
+sudo dd if=live-image-amd64.iso of=/dev/sdX bs=4M && sync
 
-# Ou use Etcher (recomendado)
+# 3. Ou use Etcher (recomendado)
 # https://www.balena.io/etcher/
 ```
 
-### Ferramentas Recomendadas
-- **Ventoy** - Múltiplas ISOs em um USB
-- **Rufus** - Windows, simples e rápido
-- **Balena Etcher** - Multiplataforma
-- **dd** - Linha de comando (Linux/Mac)
+**⚠️ AVISO**: `dd` sobrescreve o device! Verifique 2x antes de executar!
 
 ---
 
 ## 🧪 Teste em VM
 
 ### VirtualBox
-```bash
-VirtualBoxVM:
-  - RAM: 4 GB mínimo
-  - Disk: 30 GB (dinâmico)
-  - Boot: UEFI + Legacy BIOS hybrid
-  - Network: NAT ou Bridge
+```
+Configuração recomendada:
+  • RAM: 4 GB mínimo
+  • Disk: 30 GB (dinâmico)
+  • Boot: UEFI + Legacy BIOS hybrid
+  • Network: NAT ou Bridge
 ```
 
 ### QEMU
@@ -119,98 +144,131 @@ qemu-system-x86_64 \
   -enable-kvm \
   -m 4096 \
   -smp 4 \
-  -cdrom sukunaos-iso.iso \
+  -cdrom live-image-amd64.iso \
   -drive file=disk.img,format=qcow2 \
   -net nic,model=virtio \
   -net user
 ```
 
-### VMware
-- ISO funciona nativamente
-- Recomenda 4GB RAM, 30GB disk
-
 ---
 
 ## 🐛 Troubleshooting
 
-### "Git não reconhecido"
-```powershell
-git config --global user.name "Seu Nome"
-git config --global user.email "seu@email.com"
+### "lb: command not found"
+```bash
+sudo apt install live-build
 ```
 
-### "Arquivo .bat não encontrado"
-- Certifique que está no diretório correto: `C:\Users\Abdul\Desktop\SukunaOS`
-- Verifique se tem permissão de leitura
+### "ISO não encontrada"
+```bash
+# Procurar ISO
+find . -name "*.iso" -o -name "live-image*"
 
-### "GitHub Actions não executa"
-- Vá em Settings → Actions → Enable GitHub Actions
-- Verifique se o repositório é público (ou actions está ativo)
+# Se estiver em outro lugar:
+ls -la live-build/
+ls -la ./
+```
 
-### "Docker não encontrado"
-- Instale Docker Desktop: https://www.docker.com/products/docker-desktop
-- Reinicie após instalação
-- Execute `docker --version` para confirmar
+### "Espaço insuficiente"
+```bash
+# Limpar cache
+sudo apt clean
+rm -rf live-build
 
-### "Erro ao fazer flash para USB"
-- Verifique o device correto com `lsblk` ou Device Manager
-- Certifique que o USB não está em uso
-- Use ferramentas como Etcher (mais seguro)
+# Verificar espaço
+df -h
+# Precisa de ~5 GB livre
+```
 
-### "ISO não inicia"
-- Tente em UEFI mode primeiro
-- Depois tente Legacy BIOS
-- Verifique se o USB foi flashado corretamente
+### "GitHub Actions falha"
+- Verifique log em **Actions → Workflow → Job**
+- Erros comuns:
+  - ❌ `ubuntu-archive-keyring` não encontrado → Adicionar à apt install
+  - ❌ `lb: command not found` → live-build não foi instalado
+  - ❌ Permission denied → Usar `sudo`
+
+### "Build freezes/demora muito"
+```bash
+# Verificar progresso
+tail -f live-build/build_output.log
+
+# Se realmente está travado (30+ min sem atividade):
+Ctrl+C para cancelar
+rm -rf live-build
+bash scripts/build_iso.sh  # Tentar novamente
+```
 
 ---
 
 ## 📊 Especificações da ISO
 
-| Item | Valor |
-|------|-------|
-| **Base OS** | Ubuntu 24.04 LTS (Noble Numbat) |
+| Aspecto | Valor |
+|---------|-------|
+| **Base OS** | Ubuntu 24.04 LTS (Noble) |
 | **Kernel** | linux-image-generic |
-| **DE** | GNOME Shell + Flashback |
-| **Instalador** | Python + PySide6 (GUI) |
-| **Tema** | SukunaOS Crimson + macOS inspired |
-| **Tamanho** | ~2-3 GB (live ISO) |
+| **Desktop** | GNOME Shell + Flashback |
 | **Boot** | UEFI + BIOS hybrid |
-| **Format** | ISO 9660 Hybrid |
+| **Tamanho** | ~2-3 GB (ISO) |
+| **Tema** | Carmesim + Mac-inspired |
+| **Persistência** | Suportada |
 
 ---
 
-## 🎯 Próximos Passos
+## ✅ Checklist de Build
 
-1. **Build**: Execute o script acima
-2. **Flash**: Gravar em USB
-3. **Boot**: Reinicie com USB
-4. **Installer**: Siga o instalador gráfico
-5. **Setup**: Configure usuário e partições
-6. **Pronto**: SukunaOS rodando! 🔴
-
----
-
-## 📚 Documentação Completa
-
-- **README.md** - Overview geral
-- **docs/visual_identity_macos_carmesim.md** - Tema & cores
-- **README_KERNEL.md** - Build de kernel customizado
-- **docs/iso_build_guide.md** - Guia detalhado de build
+- [ ] Dependências instaladas (`validate_build.sh` passou)
+- [ ] ISO criada (`live-image-amd64.iso` existe)
+- [ ] Tamanho > 1 GB (não vazio)
+- [ ] Boot testa em VM ou hardware
+- [ ] Tema visual carrega (carmesim)
+- [ ] Installer GUI aparece
+- [ ] Network funciona no live
+- [ ] Dev Kit instala corretamente
 
 ---
 
-## 🔴 Status
+## 📚 Próximos Passos
 
-- **Base**: Ubuntu 24.04 LTS ✅
-- **Tema Visual**: Mac Carmesim ✅
-- **Installer GUI**: Python/PySide6 ✅
-- **Store POC**: Flask backend ✅
-- **Security**: LSM templates ✅
+### Se build OK:
+1. ✅ Flash para USB
+2. ✅ Boot em hardware
+3. ✅ Teste installer
+4. ✅ Instale Dev Kit
 
-**Pronto para build e teste!** 🔴
+### Se build falhar:
+1. ✅ Rode `validate_build.sh`
+2. ✅ Verifique logs
+3. ✅ Instale packages faltando
+4. ✅ Tente novamente
 
 ---
 
-**Last updated**: June 2026  
-**Maintainer**: SukunaOS Team 🔴
+## 🔴 Resumo Rápido
+
+```bash
+# 1. Validar
+bash scripts/validate_build.sh
+
+# 2. Build (escolha uma opção)
+bash scripts/build_iso.sh              # Local (Ubuntu/Debian)
+# OU
+docker run --privileged ... (veja acima)  # Docker
+# OU
+git push → GitHub Actions             # GitHub (fácil)
+
+# 3. Resultado
+# live-image-amd64.iso
+
+# 4. Flash
+sudo dd if=live-image-amd64.iso of=/dev/sdX bs=4M
+
+# 5. Boot!
+```
+
+---
+
+**Última atualização**: 2026-06-19  
+**Status**: ✅ Fully tested and corrected  
+**Base**: Ubuntu 24.04 LTS
+
 

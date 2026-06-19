@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+# SukunaOS Live Build Configuration (Ubuntu 24.04 LTS)
+# Malevolent Domain Edition - Crimson Theme
+
+lb config \
+  --distribution noble \
+  --architectures amd64 \
+  --archive-areas "main restricted universe multiverse" \
+  --binary-images iso-hybrid \
+  --bootappend-live "boot=live components persistence persistence-encryption=none hostname=sukunaos locales=pt_BR.UTF-8 keyboard-layouts=br" \
+  --debian-installer false \
+  --mirror-bootstrap "http://archive.ubuntu.com/ubuntu" \
+  --mirror-chroot "http://archive.ubuntu.com/ubuntu" \
+  --mirror-binary "http://archive.ubuntu.com/ubuntu" \
+  --debootstrap-options "--include=ubuntu-standard,ubuntu-minimal" \
+  --linux-packages "linux-image-generic" \
+  --memtest "none"

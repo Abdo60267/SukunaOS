@@ -9,16 +9,67 @@ jobs:
     steps: 
       - name: Checkout code 
         uses: actions/checkout@v4 
-      - name: Install dependencies 
+      
+      - name: Set executable permissions 
+        run: chmod +x scripts/*.sh
+      
+      - name: Install live-build dependencies 
         run: | 
-          sudo apt update 
-          sudo apt install -y live-build squashfs-tools xorriso debootstrap rsync debian-archive-keyring git make gettext isolinux syslinux-common mtools dosfstools grub-pc-bin grub-efi-amd64-bin live-boot po4a 
+          sudo apt update
+          sudo apt install -y \
+            live-build \
+            squashfs-tools \
+            xorriso \
+            debootstrap \
+            rsync \
+            ubuntu-archive-keyring \
+            live-config \
+            git \
+            make \
+            gettext \
+            grub-common \
+            grub2-common \
+            grub-efi-amd64 \
+            grub-efi-amd64-bin \
+            efibootmgr
+      
+      - name: Validate build environment
+        run: |
+          echo "🔴 Validating build environment..."
+          which lb || (echo "❌ live-build not found" && exit 1)
+          which xorriso || (echo "❌ xorriso not found" && exit 1)
+          which debootstrap || (echo "❌ debootstrap not found" && exit 1)
+          [ -d "live/config" ] || (echo "❌ live/config not found" && exit 1)
+          [ -f "scripts/build_iso.sh" ] || (echo "❌ build_iso.sh not found" && exit 1)
+          echo "✅ All dependencies present"
+      
       - name: Build ISO 
         run: | 
-          chmod +x scripts/*.sh || true 
-          sudo bash scripts/build_iso.sh 
+          echo "🔴 Starting SukunaOS ISO build..."
+          cd ${GITHUB_WORKSPACE}
+          sudo bash scripts/build_iso.sh
+          echo "🔴 Build complete"
+      
+      - name: Verify ISO was created
+        run: |
+          echo "🔴 Searching for ISO file..."
+          if [ -f "live-image-amd64.iso" ]; then
+            echo "✅ Found: live-image-amd64.iso"
+            ls -lh live-image-amd64.iso
+            mkdir -p live-build
+            mv live-image-amd64.iso live-build/live-image-amd64.iso
+          elif [ -f "live-build/live-image-amd64.iso" ]; then
+            echo "✅ Found: live-build/live-image-amd64.iso"
+            ls -lh live-build/live-image-amd64.iso
+          else
+            echo "❌ ISO not found!"
+            find . -name "*.iso" -o -name "live-image*" 2>/dev/null || true
+            exit 1
+          fi
+      
       - name: Upload ISO Artifact 
         uses: actions/upload-artifact@v4 
         with: 
           name: sukunaos-iso 
-          path: live-build/*.iso 
+          path: live-build/live-image-amd64.iso
+          retention-days: 7
