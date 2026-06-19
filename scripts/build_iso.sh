@@ -1,42 +1,37 @@
-#!/bin/bash
-set -e
-
-# Limpeza
-
-lb clean --purge || true
-rm -rf live-build
-mkdir -p live-build && cd live-build
-
-# Configuração Moderna para Debian 12
-
+#!/bin/bash 
+set -e 
+echo "Iniciando Ritual de Criacao da ISO do SukunaOS..." 
+ 
+# Limpeza 
+lb clean --purge || true 
+rm -rf live-build 
+ 
+# Criar pasta de build 
+mkdir -p live-build 
+ 
+# Copiar a configuracao base de live/ para live-build/ 
+if [ -d "live/config" ]; then 
+    echo "[*] Copiando configuracoes da pasta live/..." 
+    cp -r live/config live-build/ 
+else 
+    echo "Erro: Pasta live/config nao encontrada!" 
+    exit 1 
+fi 
+ 
+# Entrar no diretorio de build 
+cd live-build 
+ 
+# Criar pasta chroot para copiar o repositorio 
+mkdir -p config/includes.chroot/opt/sukuna 
+ 
+echo "[*] Copiando arquivos do repositorio para /opt/sukuna..." 
+cp -r ../src ../scripts ../systemd ../assets ../devkit ../tools config/includes.chroot/opt/sukuna/ 
+ 
+# Rodar a configuracao e o build 
+echo "[*] Rodando lb config..." 
 lb config 
---mode debian 
---distribution bookworm 
---archive-areas "main contrib non-free non-free-firmware" 
---mirror-bootstrap "http://deb.debian.org/debian/" 
---mirror-binary "http://deb.debian.org/debian/" 
---binary-images iso-hybrid 
---linux-flavours amd64
-
-# Repositório de segurança Debian 12
-
-mkdir -p config/archives
-
-cat > config/archives/security.list.chroot << 'EOF'
-deb http://deb.debian.org/debian-security bookworm-security main contrib non-free non-free-firmware
-EOF
-
-# Pacotes essenciais do SukunaOS
-
-mkdir -p config/package-lists
-
-cat << 'EOT' > config/package-lists/sukuna.list.chroot
-linux-image-amd64
-live-boot
-live-config
-live-config-systemd
-systemd-sysv
-EOT
-
-echo "👹 Iniciando Ritual de Criação: lb build"
-lb build
+ 
+echo "[*] Rodando lb build..." 
+lb build 
+ 
+echo "Ritual de Criacao Concluido com Sucesso!" 
