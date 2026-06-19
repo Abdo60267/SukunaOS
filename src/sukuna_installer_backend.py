@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
-"""SukunaOS installer backend prototype.
+"""SukunaOS Installer Backend - Ubuntu 24.04 LTS Edition
 
-This module provides a minimal installer backend for the live image.
-It is a proof-of-concept implementation to mount a target partition,
-bootstrap a Debian base system, create an initial user, and install GRUB.
+This module provides installer backend for the live image.
+It bootstraps Ubuntu base system, creates user, and installs GRUB.
+
+Supports:
+  - UEFI + BIOS (hybrid)
+  - Disk partitioning
+  - User creation
+  - GRUB bootloader installation
 """
 
 import argparse
@@ -15,8 +20,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-MIRROR = os.environ.get('SUKUNA_DEBOOTSTRAP_MIRROR', 'http://deb.debian.org/debian')
-SUITE = os.environ.get('SUKUNA_DEBOOTSTRAP_SUITE', 'bookworm')
+MIRROR = os.environ.get('SUKUNA_BOOTSTRAP_MIRROR', 'http://archive.ubuntu.com/ubuntu')
+SUITE = os.environ.get('SUKUNA_BOOTSTRAP_SUITE', 'noble')  # Ubuntu 24.04 LTS
 
 
 def run(cmd, check=True, capture=False):
@@ -35,38 +40,38 @@ def list_disks():
 def prepare_partition(partition):
     if not Path(partition).exists():
         raise FileNotFoundError(f"Partition path not found: {partition}")
-    print(f"Formatting partition {partition} as ext4...")
+    print(f"🔴 Formatando partição {partition} como ext4...")
     run(['mkfs.ext4', '-F', partition])
-    print("Format completed.")
+    print("✅ Formatação concluída.")
 
 
 def mount_root(target_partition, mount_base='/mnt/sukuna'):  # pragma: no cover
     target = Path(mount_base).resolve()
     target.mkdir(parents=True, exist_ok=True)
-    print(f"Mounting {target_partition} to {target}...")
+    print(f"🔴 Montando {target_partition} em {target}...")
     run(['mount', target_partition, str(target)])
     return target
 
 
 def unmount_root(mount_path):
-    print(f"Unmounting {mount_path}...")
+    print(f"🔴 Desmontando {mount_path}...")
     run(['umount', str(mount_path)])
 
 
 def bootstrap_system(root_path):
-    print(f"Bootstrapping base system into {root_path}...")
+    print(f"🔴 Bootstrapping do sistema Ubuntu para {root_path}...")
     run([
         'debootstrap',
-        '--include=python3,python3-pip,python3-pyside6,live-boot,systemd-sysv,network-manager,network-manager-gnome,xfce4,xorg,grub-pc,grub-efi-amd64,sudo',
+        '--include=ubuntu-standard,ubuntu-minimal,python3,python3-pip,python3-pyside6,live-boot,systemd-sysv,network-manager,network-manager-gnome,gnome-shell,gnome-flashback,xorg,grub-pc,grub-efi-amd64,sudo,fonts-ubuntu,fonts-inter,zsh',
         SUITE,
         str(root_path),
         MIRROR,
     ])
-    print("debootstrap finished.")
+    print("✅ Debootstrap concluído.")
 
 
 def configure_target(root_path, username, password, hostname='sukunaos'):
-    print('Configuring target system...')
+    print('🔴 Configurando sistema alvo...')
     etc = root_path / 'etc'
     (etc / 'hostname').write_text(hostname + '\n')
     (etc / 'hosts').write_text('127.0.0.1 localhost\n127.0.1.1 ' + hostname + '\n')
@@ -75,9 +80,51 @@ def configure_target(root_path, username, password, hostname='sukunaos'):
     env['HOME'] = '/root'
     env['DEBIAN_FRONTEND'] = 'noninteractive'
 
-    print('Creating user account...')
+    print('🔴 Criando conta de usuário...')
     run(['chroot', str(root_path), 'useradd', '-m', '-s', '/bin/bash', '-G', 'sudo', username])
     run(['chroot', str(root_path), 'bash', '-lc', f"echo '{username}:{password}' | chpasswd"], check=True)
+    print(f"✅ Usuário {username} criado.")
+
+
+def install_bootloader(root_path, target_device):
+    print(f'🔴 Instalando GRUB em {target_device}...')
+    run(['chroot', str(root_path), 'grub-install', '--target=x86_64-efi', '--efi-directory=/boot/efi', '--bootloader-id=SukunaOS', target_device], check=False)
+    run(['chroot', str(root_path), 'grub-install', '--target=i386-pc', target_device], check=False)
+    run(['chroot', str(root_path), 'update-grub'])
+    print("✅ GRUB instalado.")
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='SukunaOS Installer Backend (Ubuntu)')
+    subparsers = parser.add_subparsers(dest='command')
+    
+    list_cmd = subparsers.add_parser('list', help='List disks')
+    
+    prep_cmd = subparsers.add_parser('prepare', help='Format partition')
+    prep_cmd.add_argument('partition', help='Device path (e.g., /dev/sda1)')
+    
+    boot_cmd = subparsers.add_parser('bootstrap', help='Bootstrap system')
+    boot_cmd.add_argument('--root', default='/mnt/sukuna', help='Root path')
+    boot_cmd.add_argument('--user', required=True, help='Username')
+    boot_cmd.add_argument('--password', required=True, help='Password')
+    boot_cmd.add_argument('--hostname', default='sukunaos', help='Hostname')
+    boot_cmd.add_argument('--device', required=True, help='Target device for GRUB')
+    
+    args = parser.parse_args()
+    
+    if args.command == 'list':
+        list_disks()
+    elif args.command == 'prepare':
+        prepare_partition(args.partition)
+    elif args.command == 'bootstrap':
+        root = Path(args.root)
+        root.mkdir(parents=True, exist_ok=True)
+        bootstrap_system(root)
+        configure_target(root, args.user, args.password, args.hostname)
+        install_bootloader(root, args.device)
+        print("\n✅ 🔴 SISTEMA PRONTO! 🔴 ✅")
+    else:
+        parser.print_help()
     run(['chroot', str(root_path), 'bash', '-lc', "echo 'root:sukuna' | chpasswd"], check=True)
     run(['chroot', str(root_path), 'bash', '-lc', "echo 'deb http://deb.debian.org/debian bookworm main contrib non-free' > /etc/apt/sources.list"])
     run(['chroot', str(root_path), 'apt-get', 'update'])

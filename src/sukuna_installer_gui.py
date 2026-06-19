@@ -43,37 +43,40 @@ from PySide6.QtWidgets import (
 )
 
 # ──────────────────────────────────────────────────────────────────
-# Color palette: macOS dark mode tones blended with Sukuna crimson
+# Color palette: Carmesim Sukuna + macOS dark mode
+# Sukuna references: Domain, cursed energy, red marks, gold seals
 # ──────────────────────────────────────────────────────────────────
 COLORS = {
-    # Backgrounds (macOS-inspired depth layers with Sukuna warmth)
-    'bg_base':       '#0c0406',    # deepest background - shrine void
-    'bg_surface':    '#150810',    # card/panel surface
-    'bg_elevated':   '#1e0c14',    # elevated elements (inputs, tables)
-    'bg_hover':      '#2a1018',    # hover state
-    'bg_active':     '#351420',    # active/pressed state
+    # Backgrounds (Dark shrine aesthetics)
+    'bg_base':       '#0a0304',    # Shrine void - pure black with crimson tint
+    'bg_surface':    '#140708',    # Karmic domain surface
+    'bg_elevated':   '#1d0a0f',    # Elevated cursed layer
+    'bg_hover':      '#2a1115',    # Domain expansion hover
+    'bg_active':     '#351620',    # Active cursed mark
 
-    # Accent colors (Sukuna's cursed energy)
-    'accent_red':    '#c41020',    # primary cursed red
-    'accent_glow':   '#e8142a',    # bright glow red
-    'accent_gold':   '#d4a84a',    # sacred gold / seal color
-    'accent_ember':  '#8b1a1a',    # dark ember undertone
+    # Accent colors (Sukuna's crimson domain - pure ruby red)
+    'accent_red':    '#c41020',    # Primary cursed mark (Sukuna's signature red)
+    'accent_crimson':'#a50d1a',    # Darker crimson for depth
+    'accent_glow':   '#ff1a33',    # Bright domain glow
+    'accent_gold':   '#d4a84a',    # Sacred gold seals & marks
+    'accent_dark_gold': '#9d7a2f', # Dark gold shadows
 
-    # Text hierarchy (macOS-style opacity-based hierarchy)
-    'text_primary':  '#f2e8dc',    # primary text - warm parchment
-    'text_secondary':'#b09a88',    # secondary labels
-    'text_tertiary': '#6d5a4a',    # placeholder / disabled
-    'text_inverse':  '#0c0406',    # text on bright backgrounds
+    # Text hierarchy (Parchment + translucency)
+    'text_primary':  '#f0e6db',    # Primary - sacred parchment
+    'text_secondary':'#b89f8f',    # Secondary labels
+    'text_tertiary': '#6d5550',    # Placeholder / disabled
+    'text_inverse':  '#0a0304',    # Text on bright backgrounds
 
-    # Borders (subtle, macOS-like)
-    'border_subtle': '#2a1620',    # subtle separator
-    'border_focus':  '#c41020',    # focus ring
-    'border_gold':   '#d4a84a55',  # gold shimmer border (translucent)
+    # Borders (macOS subtle + Sukuna marks)
+    'border_subtle': '#2a1015',    # Subtle karmic boundary
+    'border_focus':  '#c41020',    # Focus ring - cursed red
+    'border_gold':   '#d4a84a88',  # Gold shimmer (translucent seal)
 
     # Semantic
-    'success':       '#2d8a4e',
-    'warning':       '#d4a84a',
-    'error':         '#c41020',
+    'success':       '#2d8a4e',    # Sacred green
+    'warning':       '#d4a84a',    # Gold warning
+    'error':         '#c41020',    # Cursed red
+    'danger':        '#ff1a33',    # Bright domain danger
 }
 
 # ──────────────────────────────────────────────────────────────────
@@ -202,27 +205,33 @@ QPushButton:disabled {{
     color: {COLORS['text_tertiary']};
     border-color: {COLORS['bg_surface']};
 }}
-/* Primary action button */
+/* Primary action button - Cursed Energy Gradient */
 QPushButton[accessibleName="primary"] {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-        stop:0 {COLORS['accent_red']}, stop:1 {COLORS['accent_ember']});
+        stop:0 {COLORS['accent_glow']}, stop:1 {COLORS['accent_crimson']});
     color: {COLORS['text_primary']};
     border: none;
     font-weight: 600;
     padding: 10px 28px;
+    border-radius: 8px;
 }}
 QPushButton[accessibleName="primary"]:hover {{
     background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
         stop:0 {COLORS['accent_glow']}, stop:1 {COLORS['accent_red']});
+    box-shadow: 0 4px 16px rgba(196, 16, 32, 0.4);
 }}
-/* Gold accent button */
+/* Gold accent button - Sacred Seal */
 QPushButton[accessibleName="gold"] {{
     background: transparent;
     color: {COLORS['accent_gold']};
-    border: 1px solid {COLORS['accent_gold']};
+    border: 1.5px solid {COLORS['accent_gold']};
+    border-radius: 8px;
+    font-weight: 500;
 }}
 QPushButton[accessibleName="gold"]:hover {{
-    background: rgba(212, 168, 74, 0.1);
+    background: rgba(212, 168, 74, 0.08);
+    border-color: {COLORS['accent_glow']};
+    color: {COLORS['accent_glow']};
 }}
 
 /* ── Table Widget (macOS list style) ── */

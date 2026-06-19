@@ -1,62 +1,98 @@
-<<<<<<< HEAD
-# SukunaOS
+# 🔴 SukunaOS - Malevolent Domain Edition 🔴
 
-SukunaOS é uma distribuição Linux conceitual inspirada em Ryomen Sukuna de Jujutsu Kaisen. A proposta agora é clara: um sistema operacional moderno e usável, mas com uma identidade visual de domínio malevolente: marcas vermelhas, cortes `Cleave/Dismantle`, selos dourados, shrine central e segurança com linguagem de maldição.
+**Uma distribuição Linux baseada em Ubuntu, inspirada em Ryomen Sukuna de Jujutsu Kaisen**
 
-## Visão geral
+> "A Maldição Eterna governa... e o domínio reina supremo"
 
-- **Desktop**: `Malevolent Desktop Environment (MDE)` com painel `Domain Control`, modos `Human/Vessel/King` e visual de shrine/cortes.
-- **Kernel**: Linux customizado `linux-sukuna` com foco em performance, segurança e compatibilidade.
-- **Segurança**: `King of Curses` LSM, `Cleave Guard`, sandboxing avançado e análise dinâmica com `Malevolent Domain`.
-- **Compatibilidade Windows**: `Domain Compatibility Layer (DCL)` integrado com Wine/Proton.
-- **Loja**: `Sukuna Store` unificada para Flatpak, Snap, AppImage, pacotes Debian e apps Windows.
-- **Dev Kit**: toolchains para C, C++, Python, Java, C#, Rust, Go, Lua e JavaScript.
+SukunaOS é um sistema operacional moderno e usável com identidade visual de domínio malevolente: marcas vermelhas carmesim, cortes Cleave/Dismantle, selos dourados, shrines sagradas e segurança com linguagem de maldição.
 
-## Identidade Sukuna
+## 🌋 Visão Geral
 
-- `assets/sukunaos-logo.svg` traz o brasão principal com marcas, selo e silhueta de shrine.
-- `assets/wallpaper-1.svg` é o wallpaper `Malevolent Shrine`.
-- `assets/wallpaper-2.svg` é o wallpaper `Cleave/Dismantle`.
-- `mde/mockup/Main.qml` mostra uma sessão interativa do MDE com boot, dock, menu, janelas, terminal, store, settings, segurança, DCL, snapshots e Uraume AI.
-- `docs/visual_identity.md` documenta a linguagem visual para novas telas.
-- `docs/mde_system_modules.md` organiza esses protótipos em módulos reais do sistema.
+- **Desktop**: `Malevolent Desktop Environment (MDE)` - painel Domain Control, modos Human/Vessel/King, visual de shrine carmesim com influência macOS
+- **Base**: Ubuntu 24.04 LTS (Wayland-ready, performance otimizada)
+- **Segurança**: `King of Curses` LSM, `Cleave Guard`, sandboxing avançado, `Malevolent Domain`
+- **Compatibilidade**: `Domain Compatibility Layer (DCL)` com Wine/Proton
+- **Loja**: `Sukuna Store` para Flatpak, Snap, AppImage, debs e apps Windows
+- **Dev Kit**: Toolchains para C, C++, Python, Java, C#, Rust, Go, Lua, JavaScript
 
-## Estrutura do repositório
+## 🎨 Identidade Sukuna + Mac Carmesim
 
-- `docs/` - especificações, design e roadmaps.
-- `src/` - protótipos de componentes, serviços e POCs.
-- `scripts/` - scripts de build, instalação e setup.
-- `systemd/` - units de serviço POC.
-- `mde/` - mockup visual do ambiente de desktop.
-- `devkit/` - templates e documentação do Sukuna Dev Kit.
-- `tools/` - utilitários de teste e suporte.
-- `ci/` - CI de build de kernel.
+**Cores:**
+- 🔴 **Crimson Carmesim**: #C41020 (marca Sukuna primária)
+- 🟡 **Ouro Sagrado**: #D4A84a (selos shrine)
+- ⚫ **Void Shrine**: #0c0406 (fundos profundos)
+- ⚪ **Ferro Frio**: #E8E8E8 (texto, inspirado em SF Pro Display)
 
-## Documentos principais
+**Elementos visuais:**
+- Cantos arredondados (estilo Mac)
+- Efeitos de blur e profundidade (depth layers)
+- Ícones geométricos com marcas Sukuna
+- Animações fluidas e responsivas
 
-- `docs/king_of_curses.md`
-- `docs/malevolent_domain_integration.md`
-- `docs/sukuna_store_and_dcl.md`
-- `docs/devkit.md`
-- `docs/installer_drivers_windows.md`
-- `docs/visual_identity.md`
-- `docs/test_snapshot_rollback.md`
-- `docs/roadmap.md`
+**Assets:**
+- `assets/sukunaos-logo.svg` - brasão com marcas, selo, silhueta shrine
+- `assets/wallpaper-crimson.svg` - Malevolent Shrine (carmesim)
+- `assets/wallpaper-cleave.svg` - Cleave/Dismantle (cortes dourados)
+- `assets/dock-icons/` - ícones Mac-style com marca Sukuna
 
-## Como usar
+## 📁 Estrutura do Repositório
 
-1. Leia `README_KERNEL.md` para detalhes de build de kernel.
-2. Instale o Dev Kit com `install_devkit.sh`.
-3. Teste o MDE mockup com `mde/mockup/main.py`.
-4. Execute o backend da loja em `src/sukuna_store_server.py` se desejar testar a Store POC.
-5. Use `scripts/build_iso.sh` para gerar scripts/uma ISO live bootável e, no ambiente live, teste o instalador gráfico com `python3 src/sukuna_installer_gui.py`.
-6. Para fazer a mídia persistente, use `scripts/create_persistent_usb.sh` em um dispositivo USB maior que a ISO.
-7. Veja `docs/iso_build_guide.md` para instruções completas de build, testes em VM e troubleshooting.
-8. Quer compartilhar? Veja `docs/tutorial_pegar_iso.md` para um tutorial super simples.
+```
+SukunaOS/
+├── docs/              # Especificações, design, roadmaps
+├── src/               # Protótipos de componentes e POCs
+├── scripts/           # Build, instalação, setup (Ubuntu-focused)
+├── systemd/           # Units de serviço
+├── mde/               # Mockup visual do MDE
+├── devkit/            # Templates e docs do Dev Kit
+├── assets/            # Logos, wallpapers, ícones
+├── live/              # Configuração live-build (Ubuntu)
+└── tools/             # Utilitários de teste
+```
 
-## Status
+## 🚀 Como Usar
 
-Este repositório contém um projeto conceitual completo com docs, POCs de segurança, fluxos de compatibilidade e design. Para converter em uma distribuição real, cada componente precisará ser implementado de forma nativa, empacotado e testado em hardware real.
-=======
-# SukunaOS
->>>>>>> 6c38c0aa38998595c2db149aeb674b6e89fb2bc7
+### Build da ISO (Ubuntu 24.04)
+```bash
+cd SukunaOS
+./scripts/build_iso.sh
+```
+
+### Teste Local (MDE)
+```bash
+python3 mde/mockup/main.py
+```
+
+### Instalar Dev Kit
+```bash
+./scripts/install_devkit.sh
+```
+
+### Teste da Store (POC)
+```bash
+python3 src/sukuna_store_server.py
+```
+
+### Criar USB Persistente
+```bash
+./scripts/create_persistent_usb.sh /dev/sdX
+```
+
+## 📖 Documentação Principal
+
+- `README_KERNEL.md` - Build de kernel customizado
+- `docs/king_of_curses.md` - Sistema LSM security
+- `docs/malevolent_domain_integration.md` - Sandbox avançado
+- `docs/sukuna_store_and_dcl.md` - Loja e compatibilidade
+- `docs/visual_identity.md` - Linguagem visual (Mac+Sukuna)
+- `docs/devkit.md` - Developer Kit
+- `docs/roadmap.md` - Mapa de desenvolvimento
+
+## 📊 Status
+
+- **Fase 1**: MVP Alpha (5% completo)
+- **Sprint 1.1**: MDE Foundations (20% completo)
+- **Sprint 1.2**: King of Curses LSM (15% completo)
+- **Próximos**: Sukuna Store, Malevolent Domain, Build Pipeline
+
+Base: **Ubuntu 24.04 LTS** ✅

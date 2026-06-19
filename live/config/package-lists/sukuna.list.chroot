@@ -1,20 +1,64 @@
+# SukunaOS Package List - Ubuntu 24.04 LTS
+# Malevolent Domain Edition - Crimson & Gold Theme
+
+# Boot and Live System
 live-boot
 live-config
-systemd-sysv
+systemd
+
+# Bootloader
 grub-pc
 grub-efi-amd64
-linux-image-amd64
+
+# Kernel (Ubuntu-specific)
+linux-image-generic
+
+# X11 and Display Server
 xorg
 xinit
-openbox
+
+# Desktop Environment & Window Manager (Mac-inspired minimal)
+gnome-shell
+gnome-flashback
+mutter
+
+# Mac-style theme and icons
+adwaita-icon-theme
+ubuntu-mono
+
+# Utilities
+curl
+wget
+git
+sudo
+bash-completion
+nano
+vim
+
+# Network
+network-manager
+network-manager-gnome
+openssh-client
+
+# Python and Development
 python3
 python3-pip
 python3-venv
-git
-curl
-wget
-sudo
-xfce4
-network-manager
-network-manager-gnome
-bash-completion
+build-essential
+
+# Graphics and Visualization
+feh
+imagemagick
+
+# Terminal and Shell
+gnome-terminal
+zsh
+
+# Fonts (Mac-style)
+fonts-inter
+fonts-ubuntu
+fonts-ibm-plex
+
+# Wayland (future support)
+wayland
+libwayland-dev
