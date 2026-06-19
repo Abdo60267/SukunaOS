@@ -1,22 +1,106 @@
-name: Build SukunaOS ISO 
-on: 
-  push: 
-    branches: [ main, master ] 
-  workflow_dispatch: 
-jobs: 
-  build: 
-    runs-on: ubuntu-latest 
-    steps: 
-      - name: Checkout code 
-        uses: actions/checkout@v4 
+name: Build SukunaOS ISO
+
+# Trigger conditions
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+  pull_request:
+    branches: [ main, master ]
+
+# Environment
+env:
+  UBUNTU_VERSION: "24.04"
+  ISO_NAME: "sukunaos-iso"
+  ARTIFACT_RETENTION_DAYS: 7
+
+jobs:
+  # Job 1: Build ISO
+  build:
+    name: Build ISO (amd64)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    
+    permissions:
+      contents: read
+      actions: write
+    
+    steps:
+      # ============================================================================
+      # STEP 1: Checkout code with full history
+      # ============================================================================
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref }}
       
-      - name: Set executable permissions 
-        run: chmod +x scripts/*.sh
+      # ============================================================================
+      # STEP 2: Set up environment variables
+      # ============================================================================
+      - name: 📋 Set environment variables
+        run: |
+          echo "BUILD_DATE=$(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          echo "WORKSPACE_DIR=${GITHUB_WORKSPACE}" >> $GITHUB_ENV
+          echo "BUILD_DIR=${GITHUB_WORKSPACE}/live-build" >> $GITHUB_ENV
+          echo "ISO_OUTPUT=${GITHUB_WORKSPACE}/live-build/live-image-amd64.iso" >> $GITHUB_ENV
+          
+          # Detectar se é pull request ou push direto
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "BUILD_TYPE=PR (non-artifact)" >> $GITHUB_ENV
+          else
+            echo "BUILD_TYPE=Release (with artifact)" >> $GITHUB_ENV
+          fi
+          
+          # Debug info
+          echo "================================"
+          echo "🔴 Build Environment Information"
+          echo "================================"
+          echo "GitHub Workspace: ${GITHUB_WORKSPACE}"
+          echo "Build Type: ${{ env.BUILD_TYPE }}"
+          echo "Build Date: $(echo $BUILD_DATE)"
+          echo "Runner OS: ${{ runner.os }}"
+          echo "================================"
       
-      - name: Install live-build dependencies 
-        run: | 
-          sudo apt update
-          sudo apt install -y \
+      # ============================================================================
+      # STEP 3: Check disk space before
+      # ============================================================================
+      - name: 💾 Check disk space (before build)
+        run: |
+          echo "🔴 Disk Space Status:"
+          df -h / | tail -1
+          echo ""
+          echo "Available space:"
+          df -h / | awk 'NR==2 {print $4}'
+          
+          # Verificar se tem pelo menos 10GB livres
+          AVAILABLE=$(df / | awk 'NR==2 {print $4}')
+          if [ "$AVAILABLE" -lt 10485760 ]; then
+            echo "⚠️  WARNING: Less than 10GB available!"
+            echo "    Available: $(( AVAILABLE / 1024 / 1024 ))GB"
+            echo "    Required: ~8-10GB"
+          fi
+      
+      # ============================================================================
+      # STEP 4: Set permissions on scripts
+      # ============================================================================
+      - name: 🔐 Set executable permissions on scripts
+        run: |
+          echo "🔴 Setting permissions..."
+          chmod +x scripts/*.sh || echo "⚠️  Some scripts not found"
+          chmod +x build_iso_auto.sh || echo "⚠️  build_iso_auto.sh not found"
+          echo "✅ Permissions set"
+      
+      # ============================================================================
+      # STEP 5: Install live-build and dependencies
+      # ============================================================================
+      - name: 📦 Install live-build dependencies
+        run: |
+          echo "🔴 Updating package lists..."
+          sudo apt-get update -qq
+          
+          echo "🔴 Installing dependencies (this may take 3-5 minutes)..."
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             live-build \
             squashfs-tools \
             xorriso \
@@ -31,45 +115,441 @@ jobs:
             grub2-common \
             grub-efi-amd64 \
             grub-efi-amd64-bin \
-            efibootmgr
+            efibootmgr \
+            dosfstools \
+            mtools \
+            isolinux \
+            syslinux-common
+          
+          echo "✅ Dependencies installed successfully"
       
-      - name: Validate build environment
+      # ============================================================================
+      # STEP 6: Validate build environment
+      # ============================================================================
+      - name: ✅ Validate build environment
         run: |
           echo "🔴 Validating build environment..."
-          which lb || (echo "❌ live-build not found" && exit 1)
-          which xorriso || (echo "❌ xorriso not found" && exit 1)
-          which debootstrap || (echo "❌ debootstrap not found" && exit 1)
-          [ -d "live/config" ] || (echo "❌ live/config not found" && exit 1)
-          [ -f "scripts/build_iso.sh" ] || (echo "❌ build_iso.sh not found" && exit 1)
-          echo "✅ All dependencies present"
-      
-      - name: Build ISO 
-        run: | 
-          echo "🔴 Starting SukunaOS ISO build..."
-          cd ${GITHUB_WORKSPACE}
-          sudo bash scripts/build_iso.sh
-          echo "🔴 Build complete"
-      
-      - name: Verify ISO was created
-        run: |
-          echo "🔴 Searching for ISO file..."
-          if [ -f "live-image-amd64.iso" ]; then
-            echo "✅ Found: live-image-amd64.iso"
-            ls -lh live-image-amd64.iso
-            mkdir -p live-build
-            mv live-image-amd64.iso live-build/live-image-amd64.iso
-          elif [ -f "live-build/live-image-amd64.iso" ]; then
-            echo "✅ Found: live-build/live-image-amd64.iso"
-            ls -lh live-build/live-image-amd64.iso
+          echo ""
+          
+          # Checklist de validação
+          ERRORS=0
+          
+          # Check live-build
+          if ! command -v lb &> /dev/null; then
+            echo "❌ ERROR: live-build (lb) not found"
+            ERRORS=$((ERRORS + 1))
           else
-            echo "❌ ISO not found!"
-            find . -name "*.iso" -o -name "live-image*" 2>/dev/null || true
+            echo "✅ live-build: $(lb --version)"
+          fi
+          
+          # Check xorriso
+          if ! command -v xorriso &> /dev/null; then
+            echo "❌ ERROR: xorriso not found"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ xorriso: $(xorriso -version 2>&1 | head -1)"
+          fi
+          
+          # Check debootstrap
+          if ! command -v debootstrap &> /dev/null; then
+            echo "❌ ERROR: debootstrap not found"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ debootstrap: $(debootstrap --version)"
+          fi
+          
+          # Check rsync
+          if ! command -v rsync &> /dev/null; then
+            echo "❌ ERROR: rsync not found"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ rsync: $(rsync --version | head -1)"
+          fi
+          
+          # Check live/config directory
+          if [ ! -d "live/config" ]; then
+            echo "❌ ERROR: live/config directory not found at $(pwd)/live/config"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ live/config found"
+          fi
+          
+          # Check scripts/build_iso.sh
+          if [ ! -f "scripts/build_iso.sh" ]; then
+            echo "❌ ERROR: scripts/build_iso.sh not found"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ scripts/build_iso.sh found"
+          fi
+          
+          # Check auto/config
+          if [ ! -f "live/config/auto/config" ]; then
+            echo "❌ ERROR: live/config/auto/config not found"
+            echo "    Checking for alternatives..."
+            find live/config -name "config" -type f 2>/dev/null || echo "    No config found"
+            ERRORS=$((ERRORS + 1))
+          else
+            echo "✅ live/config/auto/config found"
+          fi
+          
+          # Estrutura básica do projeto
+          for dir in src scripts assets live; do
+            if [ -d "$dir" ]; then
+              echo "✅ $dir directory found"
+            else
+              echo "⚠️  $dir directory NOT found (may be optional)"
+            fi
+          done
+          
+          echo ""
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Validation FAILED with $ERRORS error(s)"
             exit 1
+          else
+            echo "✅✅✅ All validations PASSED ✅✅✅"
           fi
       
-      - name: Upload ISO Artifact 
-        uses: actions/upload-artifact@v4 
-        with: 
-          name: sukunaos-iso 
+      # ============================================================================
+      # STEP 7: Clean previous builds
+      # ============================================================================
+      - name: 🧹 Clean previous builds
+        run: |
+          echo "🔴 Cleaning previous builds..."
+          
+          # Remove live-build folder
+          if [ -d "live-build" ]; then
+            echo "  • Removing live-build directory..."
+            rm -rf live-build
+          fi
+          
+          # Clean live-build cache
+          if command -v lb &> /dev/null; then
+            echo "  • Cleaning live-build cache..."
+            lb clean --purge 2>/dev/null || echo "  ⚠️  lb clean failed (may be normal)"
+          fi
+          
+          # Remove any orphaned ISO files
+          find . -maxdepth 1 -name "*.iso" -delete 2>/dev/null || true
+          find . -maxdepth 2 -name "live-image-*" -delete 2>/dev/null || true
+          
+          echo "✅ Clean complete"
+      
+      # ============================================================================
+      # STEP 8: Show repository info
+      # ============================================================================
+      - name: 📊 Show repository structure
+        run: |
+          echo "🔴 Repository Structure:"
+          echo ""
+          echo "Top level files:"
+          ls -lh --group-directories-first | head -20
+          echo ""
+          echo "live-build structure:"
+          if [ -d "live/config" ]; then
+            ls -la live/
+            echo ""
+            ls -la live/config/
+          fi
+      
+      # ============================================================================
+      # STEP 9: Run build script with verbose output
+      # ============================================================================
+      - name: 🔨 Build ISO (this takes 25-40 minutes)
+        run: |
+          echo "🔴🔴🔴 STARTING SUKUNAOS ISO BUILD 🔴🔴🔴"
+          echo "Time: $(date)"
+          echo "Working directory: $(pwd)"
+          echo ""
+          
+          # Set strict mode
+          set -e
+          set -o pipefail
+          
+          # Run build script with timeout (85 minutes max, leaving 5 for other steps)
+          timeout 5100 sudo bash scripts/build_iso.sh 2>&1 | tee build_output.log
+          BUILD_EXIT=$?
+          
+          if [ $BUILD_EXIT -ne 0 ]; then
+            echo "❌ Build script exited with code $BUILD_EXIT"
+            echo ""
+            echo "Last 100 lines of build output:"
+            tail -100 build_output.log || true
+            exit $BUILD_EXIT
+          fi
+          
+          echo ""
+          echo "✅ Build script completed successfully"
+      
+      # ============================================================================
+      # STEP 10: Check disk space after build
+      # ============================================================================
+      - name: 💾 Check disk space (after build)
+        run: |
+          echo "🔴 Disk Space Status (after build):"
+          df -h / | tail -1
+      
+      # ============================================================================
+      # STEP 11: Verify ISO was created
+      # ============================================================================
+      - name: 🔍 Verify ISO was created
+        run: |
+          echo "🔴 Searching for ISO file..."
+          echo ""
+          
+          ISO_FOUND=0
+          ISO_FILE=""
+          
+          # Search in multiple locations
+          if [ -f "live-image-amd64.iso" ]; then
+            ISO_FILE="$(pwd)/live-image-amd64.iso"
+            ISO_FOUND=1
+            echo "✅ Found: live-image-amd64.iso (in workspace root)"
+          elif [ -f "live-build/live-image-amd64.iso" ]; then
+            ISO_FILE="$(pwd)/live-build/live-image-amd64.iso"
+            ISO_FOUND=1
+            echo "✅ Found: live-image-amd64.iso (in live-build/)"
+          elif [ -f "live-build/images/live-image-amd64.iso" ]; then
+            ISO_FILE="$(pwd)/live-build/images/live-image-amd64.iso"
+            ISO_FOUND=1
+            echo "✅ Found: live-image-amd64.iso (in live-build/images/)"
+          fi
+          
+          # If still not found, search recursively
+          if [ $ISO_FOUND -eq 0 ]; then
+            echo "❌ ISO not found in expected locations"
+            echo ""
+            echo "Searching entire workspace for .iso files..."
+            FOUND_ISOS=$(find . -name "*.iso" -type f 2>/dev/null | head -10)
+            
+            if [ -n "$FOUND_ISOS" ]; then
+              echo "Found ISO files:"
+              echo "$FOUND_ISOS"
+              
+              # Use the first one found
+              ISO_FILE=$(echo "$FOUND_ISOS" | head -1)
+              ISO_FOUND=1
+            else
+              echo "❌ No ISO files found anywhere!"
+              echo ""
+              echo "Checking live-build directory structure:"
+              if [ -d "live-build" ]; then
+                find live-build -type f -name "*image*" 2>/dev/null | head -20 || echo "No image files found"
+              fi
+              exit 1
+            fi
+          fi
+          
+          # Ensure ISO_FILE is absolute path
+          if [[ ! "$ISO_FILE" = /* ]]; then
+            ISO_FILE="$(cd "$(dirname "$ISO_FILE")" && pwd)/$(basename "$ISO_FILE")"
+          fi
+          
+          echo ""
+          echo "ISO file: $ISO_FILE"
+          echo ""
+          
+          # Validate ISO file
+          if [ ! -f "$ISO_FILE" ]; then
+            echo "❌ ERROR: ISO file not found at $ISO_FILE"
+            exit 1
+          fi
+          
+          # Check file size
+          ISO_SIZE=$(stat -c%s "$ISO_FILE" 2>/dev/null || stat -f%z "$ISO_FILE" 2>/dev/null || echo "0")
+          ISO_SIZE_MB=$((ISO_SIZE / 1024 / 1024))
+          ISO_SIZE_HUMAN=$(ls -lh "$ISO_FILE" | awk '{print $5}')
+          
+          echo "✅ ISO Details:"
+          echo "   File: $ISO_FILE"
+          echo "   Size: $ISO_SIZE_HUMAN ($ISO_SIZE_MB MB, $ISO_SIZE bytes)"
+          echo ""
+          
+          # Warnings
+          if [ "$ISO_SIZE" -lt 500000000 ]; then
+            echo "⚠️  WARNING: ISO is smaller than 500MB"
+            echo "   This might indicate an incomplete build"
+            echo "   Size: $ISO_SIZE_MB MB"
+          elif [ "$ISO_SIZE" -gt 4000000000 ]; then
+            echo "⚠️  WARNING: ISO is larger than 4GB"
+            echo "   This might be unusual"
+            echo "   Size: $ISO_SIZE_MB MB"
+          else
+            echo "✅ ISO size looks good: ${ISO_SIZE_MB}MB"
+          fi
+          
+          # Save ISO path to env for next steps
+          echo "ISO_FILE=$ISO_FILE" >> $GITHUB_ENV
+          echo "ISO_SIZE_MB=$ISO_SIZE_MB" >> $GITHUB_ENV
+      
+      # ============================================================================
+      # STEP 12: Prepare artifact directory
+      # ============================================================================
+      - name: 📁 Prepare artifact directory
+        run: |
+          echo "🔴 Preparing artifact directory..."
+          
+          # Create live-build dir if it doesn't exist
+          mkdir -p live-build
+          
+          # Move or copy ISO to standard location
+          if [ -f "${{ env.ISO_FILE }}" ]; then
+            TARGET="live-build/live-image-amd64.iso"
+            
+            # If not already in the right place, copy it
+            if [ "${{ env.ISO_FILE }}" != "$(pwd)/live-build/live-image-amd64.iso" ]; then
+              echo "  Moving ISO to live-build/"
+              cp "${{ env.ISO_FILE }}" "$TARGET"
+            fi
+            
+            # Verify
+            if [ -f "$TARGET" ]; then
+              echo "✅ ISO ready at: $TARGET"
+              ls -lh "$TARGET"
+            else
+              echo "❌ Failed to prepare ISO"
+              exit 1
+            fi
+          fi
+      
+      # ============================================================================
+      # STEP 13: Create build manifest (for debugging)
+      # ============================================================================
+      - name: 📝 Create build manifest
+        if: always()
+        run: |
+          echo "🔴 Creating build manifest..."
+          
+          cat > live-build/BUILD_MANIFEST.txt << EOF
+          ==================================================
+          SukunaOS ISO Build Manifest
+          ==================================================
+          
+          Build Date: ${{ env.BUILD_DATE }}
+          Build Type: ${{ env.BUILD_TYPE }}
+          GitHub Repository: ${{ github.repository }}
+          GitHub Ref: ${{ github.ref }}
+          GitHub SHA: ${{ github.sha }}
+          Runner OS: ${{ runner.os }}
+          
+          Environment:
+          - Ubuntu Version: 24.04 LTS
+          - Live-build Version: $(lb --version 2>/dev/null || echo "unknown")
+          
+          Output Files:
+          - ISO: live-build/live-image-amd64.iso
+          - Build Log: live-build/build_output.log
+          - Config Log: live-build/config_output.log
+          
+          Size (MB): ${{ env.ISO_SIZE_MB }}
+          
+          ==================================================
+          EOF
+          
+          echo "✅ Manifest created"
+      
+      # ============================================================================
+      # STEP 14: Upload build logs (even if failed)
+      # ============================================================================
+      - name: 📤 Upload build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build_output.log
+            live-build/config_output.log
+            live-build/BUILD_MANIFEST.txt
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+      
+      # ============================================================================
+      # STEP 15: Upload ISO artifact (only if not PR)
+      # ============================================================================
+      - name: 📦 Upload ISO Artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ISO_NAME }}
           path: live-build/live-image-amd64.iso
-          retention-days: 7
+          if-no-files-found: error
+          retention-days: ${{ env.ARTIFACT_RETENTION_DAYS }}
+      
+      # ============================================================================
+      # STEP 16: Print success summary
+      # ============================================================================
+      - name: 🎉 Build Success Summary
+        if: success()
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════╗"
+          echo "║          🔴 BUILD COMPLETED SUCCESSFULLY 🔴         ║"
+          echo "╚════════════════════════════════════════════════════╝"
+          echo ""
+          echo "✅ ISO Build: PASSED"
+          echo "   Location: live-build/live-image-amd64.iso"
+          echo "   Size: ${{ env.ISO_SIZE_MB }} MB"
+          echo ""
+          echo "📥 Download:"
+          echo "   1. Go to: https://github.com/${{ github.repository }}"
+          echo "   2. Click 'Actions'"
+          echo "   3. Find the latest successful build"
+          echo "   4. Download the '${{ env.ISO_NAME }}' artifact"
+          echo ""
+          echo "🚀 Next steps:"
+          echo "   1. Extract ISO if needed"
+          echo "   2. Use Balena Etcher to flash to USB"
+          echo "   3. Or test in VirtualBox"
+          echo "   4. Boot and enjoy SukunaOS!"
+          echo ""
+          echo "⏱️  Build Duration: Check GitHub Actions for details"
+          echo "🔴 Build finished at: $(date)"
+          echo ""
+      
+      # ============================================================================
+      # STEP 17: Print failure summary
+      # ============================================================================
+      - name: ❌ Build Failure Summary
+        if: failure()
+        run: |
+          echo ""
+          echo "╔════════════════════════════════════════════════════╗"
+          echo "║               ❌ BUILD FAILED ❌                    ║"
+          echo "╚════════════════════════════════════════════════════╝"
+          echo ""
+          echo "Possible issues:"
+          echo "1. Missing dependencies - check 'Install dependencies' step"
+          echo "2. Insufficient disk space - need ~10GB free"
+          echo "3. live/config files not found or corrupted"
+          echo "4. live-build version incompatibility"
+          echo ""
+          echo "📋 Debugging steps:"
+          echo "1. Check the 'Validate build environment' step"
+          echo "2. Review 'Build logs' artifact for details"
+          echo "3. Check 'Build ISO' step output for specific errors"
+          echo ""
+          echo "🔴 Build failed at: $(date)"
+          echo ""
+          exit 1
+
+# ============================================================================
+# Job 2: Summary (optional, for reporting)
+# ============================================================================
+  summary:
+    name: Build Summary
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📊 Job Status
+        run: |
+          BUILD_STATUS="${{ needs.build.result }}"
+          
+          if [ "$BUILD_STATUS" = "success" ]; then
+            echo "🟢 Build job: SUCCESS"
+            exit 0
+          elif [ "$BUILD_STATUS" = "failure" ]; then
+            echo "🔴 Build job: FAILED"
+            exit 1
+          else
+            echo "🟡 Build job: $BUILD_STATUS"
+          fi
