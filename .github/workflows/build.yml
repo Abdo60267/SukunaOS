@@ -106,7 +106,6 @@ jobs:
             xorriso \
             debootstrap \
             rsync \
-            ubuntu-archive-keyring \
             live-config \
             git \
             make \
@@ -119,7 +118,10 @@ jobs:
             dosfstools \
             mtools \
             isolinux \
-            syslinux-common
+            syslinux-common || true
+          
+          # Try to install ubuntu-archive-keyring if available
+          sudo apt-get install -y ubuntu-archive-keyring 2>/dev/null || echo "⚠️  ubuntu-archive-keyring not available (non-critical)"
           
           echo "✅ Dependencies installed successfully"
       
@@ -231,6 +233,9 @@ jobs:
           # Remove any orphaned ISO files
           find . -maxdepth 1 -name "*.iso" -delete 2>/dev/null || true
           find . -maxdepth 2 -name "live-image-*" -delete 2>/dev/null || true
+          
+          # Create live-build directory for later use
+          mkdir -p live-build
           
           echo "✅ Clean complete"
       
@@ -418,6 +423,9 @@ jobs:
         if: always()
         run: |
           echo "🔴 Creating build manifest..."
+          
+          # Create directory first
+          mkdir -p live-build
           
           cat > live-build/BUILD_MANIFEST.txt << EOF
           ==================================================
