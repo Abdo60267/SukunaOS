@@ -11,18 +11,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Latest Build Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y live-build squashfs-tools xorriso debootstrap rsync
+          sudo apt-get install -y squashfs-tools xorriso debootstrap rsync git make
+          sudo apt-get remove -y live-build
+          git clone https://salsa.debian.org/live-team/live-build.git
+          cd live-build
+          sudo make install
+          cd ..
 
-      - name: Run Build Script as Root
+      - name: Build ISO
         run: |
           chmod +x scripts/*.sh || true
-          # Forçamos o sudo aqui para englobar todo o processo de uma vez
           sudo bash scripts/build_iso.sh
 
-      - name: Upload Finished ISO
+      - name: Upload ISO
         uses: actions/upload-artifact@v4
         with:
           name: sukunaos-iso
