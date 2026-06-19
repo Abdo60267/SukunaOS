@@ -1,4 +1,5 @@
 name: Build SukunaOS ISO
+
 on:
   push:
     branches: [ main ]
@@ -7,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -14,12 +16,23 @@ jobs:
       - name: Install Latest Build Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso debootstrap rsync git make gettext isolinux syslinux-common mtools dosfstools grub-pc-bin grub-efi-amd64-bin live-boot
-          sudo apt-get remove -y live-build
-          git clone https://salsa.debian.org/live-team/live-build.git
-          cd live-build
-          sudo make install MANPAGES=false
-          cd ..
+          sudo apt-get install -y \
+            squashfs-tools \
+            xorriso \
+            debootstrap \
+            rsync \
+            git \
+            make \
+            gettext \
+            isolinux \
+            syslinux-common \
+            mtools \
+            dosfstools \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            live-boot \
+            live-build \
+            po4a
 
       - name: Build ISO
         run: |
