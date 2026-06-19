@@ -14,11 +14,11 @@ jobs:
       - name: Install Latest Build Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y squashfs-tools xorriso debootstrap rsync git make
+          sudo apt-get install -y squashfs-tools xorriso debootstrap rsync git make gettext isolinux syslinux-common mtools dosfstools grub-pc-bin grub-efi-amd64-bin live-boot
           sudo apt-get remove -y live-build
           git clone https://salsa.debian.org/live-team/live-build.git
           cd live-build
-          sudo make install
+          sudo make install MANPAGES=false
           cd ..
 
       - name: Build ISO
