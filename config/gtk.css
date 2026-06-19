@@ -1,0 +1,407 @@
+/* SukunaOS GTK Theme - Crimson & Gold
+   Apply with: cp config/gtk.css ~/.config/gtk-3.0/gtk.css
+*/
+
+/* Color Variables */
+:root {
+  --sukuna-crimson: #C41020;
+  --sukuna-crimson-dark: #A50D1A;
+  --sukuna-glow: #FF1A33;
+  --sukuna-gold: #D4A84A;
+  --sukuna-gold-dark: #9D7A2F;
+  
+  --sukuna-void: #0A0304;
+  --sukuna-void-surface: #140708;
+  --sukuna-void-elevated: #1D0A0F;
+  --sukuna-void-hover: #2A1115;
+  --sukuna-void-active: #351620;
+  
+  --sukuna-text-primary: #F0E6DB;
+  --sukuna-text-secondary: #B89F8F;
+  --sukuna-text-tertiary: #6D5550;
+  
+  --sukuna-border: #2A1015;
+}
+
+/* Global Styling */
+* {
+  background-color: var(--sukuna-void);
+  color: var(--sukuna-text-primary);
+  font-family: "Inter", "SF Pro Display", "Helvetica Neue", sans-serif;
+}
+
+/* Window Decorations */
+.titlebar {
+  background: linear-gradient(to right, var(--sukuna-void), var(--sukuna-void-surface));
+  border-bottom: 1px solid var(--sukuna-border);
+  color: var(--sukuna-text-primary);
+}
+
+.titlebar .title {
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: -0.2px;
+}
+
+/* Buttons */
+button {
+  background: var(--sukuna-void-surface);
+  color: var(--sukuna-text-primary);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-weight: 500;
+  transition: all 150ms ease-in-out;
+}
+
+button:hover {
+  background: var(--sukuna-void-hover);
+  border-color: var(--sukuna-crimson);
+}
+
+button:active {
+  background: var(--sukuna-void-active);
+  transform: scale(0.98);
+}
+
+button.suggested-action {
+  background: linear-gradient(135deg, var(--sukuna-glow), var(--sukuna-crimson-dark));
+  color: var(--sukuna-text-primary);
+  border: none;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(196, 16, 32, 0.3);
+}
+
+button.suggested-action:hover {
+  box-shadow: 0 4px 16px rgba(196, 16, 32, 0.5);
+}
+
+button.destructive-action {
+  background: var(--sukuna-crimson);
+  color: var(--sukuna-text-primary);
+  border: none;
+}
+
+button.destructive-action:hover {
+  background: var(--sukuna-glow);
+}
+
+/* Entry Fields */
+entry {
+  background: var(--sukuna-void-elevated);
+  color: var(--sukuna-text-primary);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: all 150ms ease-in-out;
+}
+
+entry:focus {
+  border: 1.5px solid var(--sukuna-crimson);
+  background: var(--sukuna-void-hover);
+  box-shadow: 0 0 8px rgba(196, 16, 32, 0.2);
+}
+
+entry::placeholder {
+  color: var(--sukuna-text-tertiary);
+}
+
+/* Text Views */
+textview {
+  background: var(--sukuna-void-elevated);
+  color: var(--sukuna-text-primary);
+}
+
+/* Selection */
+selection {
+  background: var(--sukuna-crimson);
+  color: var(--sukuna-text-primary);
+}
+
+/* Labels */
+label {
+  color: var(--sukuna-text-primary);
+}
+
+label.dim-label {
+  color: var(--sukuna-text-secondary);
+}
+
+label.error {
+  color: var(--sukuna-glow);
+}
+
+label.warning {
+  color: var(--sukuna-gold);
+}
+
+label.success {
+  color: #2D8A4E;
+}
+
+/* Headers */
+.heading {
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--sukuna-text-primary);
+}
+
+.subtitle {
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--sukuna-text-secondary);
+  margin-bottom: 12px;
+}
+
+.caption {
+  font-size: 11px;
+  color: var(--sukuna-text-tertiary);
+}
+
+/* Cards / Frames */
+frame,
+.frame {
+  background: var(--sukuna-void-surface);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.card {
+  background: var(--sukuna-void-surface);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Separators */
+separator {
+  background: var(--sukuna-border);
+  min-width: 1px;
+  min-height: 1px;
+}
+
+/* Spinners */
+spinbutton {
+  background: var(--sukuna-void-elevated);
+  color: var(--sukuna-text-primary);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 6px;
+}
+
+/* Combo Boxes */
+combobox {
+  background: var(--sukuna-void-elevated);
+  color: var(--sukuna-text-primary);
+}
+
+combobox-entry {
+  background: var(--sukuna-void-elevated);
+  color: var(--sukuna-text-primary);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 6px;
+}
+
+/* Check Buttons */
+checkbutton check {
+  background: var(--sukuna-void-elevated);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 4px;
+  color: var(--sukuna-crimson);
+}
+
+checkbutton check:checked {
+  background: var(--sukuna-crimson);
+  border-color: var(--sukuna-crimson);
+}
+
+/* Radio Buttons */
+radiobutton radio {
+  background: var(--sukuna-void-elevated);
+  border: 1px solid var(--sukuna-border);
+  color: var(--sukuna-crimson);
+}
+
+radiobutton radio:checked {
+  background: var(--sukuna-crimson);
+  border-color: var(--sukuna-crimson);
+}
+
+/* Scroll */
+scrollbar {
+  background: transparent;
+}
+
+scrollbar slider {
+  background: var(--sukuna-void-hover);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 4px;
+  min-width: 8px;
+  min-height: 8px;
+}
+
+scrollbar slider:hover {
+  background: var(--sukuna-void-active);
+}
+
+/* Progress Bars */
+progressbar {
+  background: var(--sukuna-void-surface);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 4px;
+}
+
+progressbar trough {
+  background: var(--sukuna-void-elevated);
+  min-height: 4px;
+}
+
+progressbar progress {
+  background: linear-gradient(90deg, var(--sukuna-crimson), var(--sukuna-glow));
+  border-radius: 4px;
+}
+
+/* Menu Bar */
+menubar {
+  background: var(--sukuna-void-surface);
+  border-bottom: 1px solid var(--sukuna-border);
+  color: var(--sukuna-text-primary);
+}
+
+menubar > menuitem:hover {
+  background: var(--sukuna-void-hover);
+}
+
+/* Context Menu */
+menu {
+  background: var(--sukuna-void-surface);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 6px;
+  padding: 4px 0;
+}
+
+menuitem {
+  padding: 8px 16px;
+}
+
+menuitem:hover {
+  background: var(--sukuna-void-hover);
+}
+
+menuitem:checked {
+  background: var(--sukuna-crimson);
+  color: var(--sukuna-text-primary);
+}
+
+/* Tooltips */
+tooltip {
+  background: var(--sukuna-void-surface);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  color: var(--sukuna-text-primary);
+}
+
+tooltip.background {
+  background: var(--sukuna-void-surface);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+/* Dialog Backgrounds */
+dialog {
+  background: var(--sukuna-void-surface);
+}
+
+messagedialog {
+  background: var(--sukuna-void-surface);
+}
+
+/* File Chooser */
+filechooserwidget {
+  background: var(--sukuna-void);
+}
+
+filechooserwidget > box {
+  background: transparent;
+}
+
+/* Application Specific */
+.sidebar {
+  background: var(--sukuna-void);
+  border-right: 1px solid var(--sukuna-border);
+}
+
+.sidebar-button {
+  color: var(--sukuna-text-secondary);
+}
+
+.sidebar-button:hover {
+  color: var(--sukuna-text-primary);
+  background: var(--sukuna-void-hover);
+}
+
+.sidebar-button:selected {
+  background: linear-gradient(to right, var(--sukuna-crimson), transparent);
+  color: var(--sukuna-text-primary);
+  font-weight: 600;
+}
+
+/* Search Bar */
+.search {
+  background: var(--sukuna-void-elevated);
+  border: 1px solid var(--sukuna-border);
+  border-radius: 20px;
+  padding: 6px 16px;
+}
+
+.search:focus {
+  border-color: var(--sukuna-crimson);
+  background: var(--sukuna-void-hover);
+}
+
+/* Animations */
+@keyframes sukuna-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(196, 16, 32, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 26, 51, 0.6);
+  }
+}
+
+.pulse {
+  animation: sukuna-glow 2s ease-in-out infinite;
+}
+
+/* Accessibility */
+*:disabled {
+  opacity: 0.5;
+  color: var(--sukuna-text-tertiary);
+}
+
+*:disabled label {
+  color: var(--sukuna-text-tertiary);
+}
+
+/* HiDPI */
+@media (max-width: 600px) {
+  button {
+    padding: 8px 20px;
+    min-height: 44px;
+  }
+  
+  entry {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}
+
+/* Print Media */
+@media print {
+  * {
+    background: white !important;
+    color: black !important;
+    border-color: black !important;
+  }
+}
