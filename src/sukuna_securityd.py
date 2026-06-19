@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 """
-sukuna_securityd.py - simple userspace security daemon for King of Curses POC
+SukunaOS Security Daemon - King of Curses Edition
+Userspace security daemon for POC LSM integration
 
 API (JSON lines over UNIX socket /run/sukuna-securityd.sock):
- - {"cmd":"check","path":"/path/to/file"}
- - {"cmd":"add","path":"/path/to/file","verdict":"safe"}
- - {"cmd":"list"}
- - {"cmd":"status"}
+  - {"cmd":"check","path":"/path/to/file"}
+  - {"cmd":"add","path":"/path/to/file","verdict":"safe|suspicious|malicious"}
+  - {"cmd":"list"}
+  - {"cmd":"status"}
 
-Behavior:
- - checks SQLite cache (/var/lib/sukuna/security.db)
- - on cache miss, calls /opt/sukuna/malevolent-runner.py analyze
- - stores verdict and returns JSON
+Features:
+  - SQLite cache (/var/lib/sukuna/security.db)
+  - Netlink listener for kernel exec_check events
+  - Async file analysis (malevolent-runner.py)
+  - JSON-RPC over UNIX socket
+  - Thread-safe database operations
+
+Status: POC - Production version in Sprint 1.2
 """
 
 import json
+import logging
 import os
 import shutil
 import socket
@@ -26,58 +32,306 @@ import time
 from socketserver import ThreadingUnixStreamServer, StreamRequestHandler
 import struct
 
+# Logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='🔴 [%(asctime)s] %(levelname)s: %(message)s',
+    handlers=[
+        logging.FileHandler('/var/log/sukuna-securityd.log'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
+logger = logging.getLogger('sukuna-securityd')
+
+# Configuration
+DB_PATH = '/var/lib/sukuna/security.db'
+SOCKET_PATH = '/run/sukuna-securityd.sock'
+ANALYZER_SCRIPT = '/opt/sukuna/malevolent_runner.py'
+
 # Netlink constants
 NETLINK_USERSOCK = 2
 NLMSG_HDRLEN = 16
 
 
+def init_db(conn):
+    """Initialize security database schema"""
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS verdicts (
+        path TEXT PRIMARY KEY,
+        verdict TEXT,
+        score REAL,
+        timestamp INTEGER,
+        metadata TEXT
+    )''')
+    c.execute('''CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp INTEGER,
+        event_type TEXT,
+        path TEXT,
+        result TEXT
+    )''')
+    conn.commit()
+
+
 def _connect_db():
-    """Create a new thread-local SQLite connection (thread-safe)."""
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+    """Create thread-local SQLite connection (thread-safe)"""
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False, timeout=10)
+    conn.row_factory = sqlite3.Row
     init_db(conn)
     return conn
 
 
-def nl_recv_loop():
-    """Listen to kernel netlink broadcasts for exec_check events."""
-    s = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_USERSOCK)
-    s.bind((os.getpid(), 0))
-    print('sukuna-securityd: netlink listener bound, pid=%d' % os.getpid())
-    while True:
-        data = s.recv(65536)
-        if not data:
-            continue
-        # skip nl header
-        if len(data) <= NLMSG_HDRLEN:
-            continue
-        payload = data[NLMSG_HDRLEN:]
-        try:
-            msg = payload.decode('utf-8', errors='ignore')
-            # Expect JSON-like payload {"event":"exec_check","path":"..."}
-            if 'exec_check' in msg:
-                try:
-                    j = json.loads(msg)
-                except Exception:
-                    j = None
-                if j and 'path' in j:
-                    path = j['path']
-                    print('sukuna-securityd: received exec_check for', path)
-                    # analyze asynchronously with its own DB connection
-                    t = threading.Thread(target=analyze_and_store, args=(path,))
-                    t.daemon = True
-                    t.start()
-        except Exception as e:
-            print('netlink parse error', e)
+def analyze_file(path):
+    """Analyze file using malevolent-runner.py
+    
+    Returns: {"verdict": "safe|suspicious|malicious", "score": 0.0-1.0, ...}
+    """
+    try:
+        if not os.path.exists(path):
+            logger.warning(f"File not found: {path}")
+            return {"verdict": "unknown", "score": 0, "reason": "file_not_found"}
+        
+        logger.info(f"Analyzing: {path}")
+        
+        # Call analyzer script
+        result = subprocess.run(
+            [sys.executable, ANALYZER_SCRIPT, "analyze", path],
+            capture_output=True,
+            timeout=30,
+            text=True
+        )
+        
+        if result.returncode == 0:
+            try:
+                return json.loads(result.stdout)
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON from analyzer: {result.stdout}")
+                return {"verdict": "unknown", "score": 0.5}
+        else:
+            logger.error(f"Analyzer failed: {result.stderr}")
+            return {"verdict": "suspicious", "score": 0.5, "reason": "analysis_failed"}
+    
+    except subprocess.TimeoutExpired:
+        logger.error(f"Analysis timeout: {path}")
+        return {"verdict": "suspicious", "score": 0.7, "reason": "timeout"}
+    except Exception as e:
+        logger.error(f"Analysis error: {e}")
+        return {"verdict": "unknown", "score": 0, "error": str(e)}
+
+
+def store_verdict(conn, path, verdict, score, metadata=None):
+    """Store verdict in cache"""
+    c = conn.cursor()
+    c.execute('''INSERT OR REPLACE INTO verdicts 
+                 (path, verdict, score, timestamp, metadata)
+                 VALUES (?, ?, ?, ?, ?)''',
+              (path, verdict, score, int(time.time()), 
+               json.dumps(metadata or {})))
+    conn.commit()
+    logger.info(f"Stored verdict: {path} → {verdict}")
+
+
+def get_verdict(conn, path):
+    """Retrieve cached verdict"""
+    c = conn.cursor()
+    c.execute('SELECT * FROM verdicts WHERE path = ?', (path,))
+    row = c.fetchone()
+    if row:
+        return dict(row)
+    return None
 
 
 def analyze_and_store(path):
-    """Analyze a file and store the result using a thread-local DB connection."""
+    """Analyze file and store result (async)"""
     conn = _connect_db()
     try:
-        res = analyze_file(path)
-        verdict = res.get('verdict', 'unknown')
-        score = res.get('score', 0.0)
-        store_cache(conn, path, verdict, score, res)
+        result = analyze_file(path)
+        verdict = result.get('verdict', 'unknown')
+        score = result.get('score', 0.0)
+        store_verdict(conn, path, verdict, score, result)
+        
+        # Log event
+        c = conn.cursor()
+        c.execute('INSERT INTO events (timestamp, event_type, path, result) VALUES (?, ?, ?, ?)',
+                  (int(time.time()), 'analyze', path, json.dumps(result)))
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Store error: {e}")
+    finally:
+        conn.close()
+
+
+def nl_recv_loop():
+    """Listen to kernel netlink broadcasts for exec_check events"""
+    try:
+        s = socket.socket(socket.AF_NETLINK, socket.SOCK_RAW, NETLINK_USERSOCK)
+        s.bind((os.getpid(), 0))
+        logger.info(f"🔴 Netlink listener bound (PID={os.getpid()})")
+        
+        while True:
+            try:
+                data = s.recv(65536)
+                if not data:
+                    continue
+                
+                # Skip netlink header
+                if len(data) <= NLMSG_HDRLEN:
+                    continue
+                
+                payload = data[NLMSG_HDRLEN:]
+                msg = payload.decode('utf-8', errors='ignore')
+                
+                # Expect JSON payload: {"event":"exec_check","path":"..."}
+                if 'exec_check' in msg:
+                    try:
+                        j = json.loads(msg)
+                        if 'path' in j:
+                            path = j['path']
+                            logger.info(f"🔴 Exec check event: {path}")
+                            # Analyze async
+                            t = threading.Thread(target=analyze_and_store, args=(path,), daemon=True)
+                            t.start()
+                    except json.JSONDecodeError:
+                        logger.warning(f"Invalid JSON from kernel: {msg[:100]}")
+            except Exception as e:
+                logger.error(f"Netlink parse error: {e}")
+    except Exception as e:
+        logger.error(f"Netlink socket error: {e}")
+        logger.warning("Netlink listener disabled - kernel LSM integration not available")
+
+
+class SecurityRequestHandler(StreamRequestHandler):
+    """Handle socket API requests"""
+    
+    def handle(self):
+        """Process JSON-RPC requests"""
+        try:
+            # Read JSON request (ends with newline)
+            data = self.rfile.readline().decode('utf-8').strip()
+            if not data:
+                return
+            
+            req = json.loads(data)
+            cmd = req.get('cmd')
+            
+            logger.info(f"Command: {cmd}")
+            
+            conn = _connect_db()
+            resp = {"error": "unknown command"}
+            
+            try:
+                if cmd == 'check':
+                    path = req.get('path')
+                    if not path:
+                        resp = {"error": "missing path"}
+                    else:
+                        # Check cache first
+                        cached = get_verdict(conn, path)
+                        if cached:
+                            resp = {
+                                "verdict": cached['verdict'],
+                                "score": cached['score'],
+                                "cached": True,
+                                "timestamp": cached['timestamp']
+                            }
+                        else:
+                            # Analyze now
+                            result = analyze_file(path)
+                            verdict = result.get('verdict', 'unknown')
+                            score = result.get('score', 0)
+                            store_verdict(conn, path, verdict, score, result)
+                            resp = {
+                                "verdict": verdict,
+                                "score": score,
+                                "cached": False,
+                                "analysis": result
+                            }
+                
+                elif cmd == 'add':
+                    path = req.get('path')
+                    verdict = req.get('verdict', 'unknown')
+                    if path:
+                        store_verdict(conn, path, verdict, 1.0 if verdict == 'safe' else 0.0)
+                        resp = {"ok": True, "path": path, "verdict": verdict}
+                    else:
+                        resp = {"error": "missing path"}
+                
+                elif cmd == 'list':
+                    c = conn.cursor()
+                    c.execute('SELECT path, verdict, score, timestamp FROM verdicts LIMIT 100')
+                    rows = [dict(row) for row in c.fetchall()]
+                    resp = {"verdicts": rows, "count": len(rows)}
+                
+                elif cmd == 'status':
+                    c = conn.cursor()
+                    c.execute('SELECT COUNT(*) FROM verdicts')
+                    total = c.fetchone()[0]
+                    c.execute('SELECT COUNT(*) FROM events')
+                    events = c.fetchone()[0]
+                    resp = {
+                        "status": "running",
+                        "version": "1.0.0-poc",
+                        "cached_verdicts": total,
+                        "events": events,
+                        "db": DB_PATH
+                    }
+                
+                else:
+                    resp = {"error": f"unknown command: {cmd}"}
+            
+            finally:
+                conn.close()
+            
+            # Send response
+            self.wfile.write((json.dumps(resp) + '\n').encode())
+            logger.info(f"Response: {cmd} → {resp.get('verdict', resp.get('status', 'error'))}")
+        
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {e}")
+            self.wfile.write(json.dumps({"error": "invalid json"}).encode() + b'\n')
+        except Exception as e:
+            logger.error(f"Handler error: {e}")
+            self.wfile.write(json.dumps({"error": "internal error"}).encode() + b'\n')
+
+
+def main():
+    """Start security daemon"""
+    # Setup directories
+    os.makedirs('/var/lib/sukuna', exist_ok=True)
+    os.makedirs('/var/log', exist_ok=True)
+    
+    logger.info("🔴 ════════════════════════════════════════")
+    logger.info("🔴 SUKUNA SECURITY DAEMON (King of Curses)")
+    logger.info("🔴 ════════════════════════════════════════")
+    logger.info(f"Database: {DB_PATH}")
+    logger.info(f"Socket: {SOCKET_PATH}")
+    logger.info(f"Log: /var/log/sukuna-securityd.log")
+    
+    # Start netlink listener in background thread
+    nl_thread = threading.Thread(target=nl_recv_loop, daemon=True)
+    nl_thread.start()
+    
+    # Remove old socket
+    if os.path.exists(SOCKET_PATH):
+        os.remove(SOCKET_PATH)
+    
+    # Start socket server
+    try:
+        server = ThreadingUnixStreamServer(SOCKET_PATH, SecurityRequestHandler)
+        os.chmod(SOCKET_PATH, 0o666)
+        logger.info("🔴 Server listening on UNIX socket")
+        logger.info("🔴 Ritual expanded - domain prepared")
+        server.serve_forever()
+    except KeyboardInterrupt:
+        logger.info("🔴 Ritual interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
         print('sukuna-securityd: stored verdict', verdict, 'for', path)
     finally:
         conn.close()
